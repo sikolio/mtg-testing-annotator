@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { DecklistPanel } from "@/components/DecklistPanel";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
@@ -23,10 +23,50 @@ type ReviewerWorkspaceProps = {
 
 export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWorkspaceProps) {
   const playerRef = useRef<YouTubePlayerHandle | null>(null);
+  const handledCheckpointIdsRef = useRef<Set<string>>(new Set());
   const [timestampSeconds, setTimestampSeconds] = useState(0);
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    handledCheckpointIdsRef.current = new Set();
+  }, [session.id]);
+
+  useEffect(() => {
+    if (decisionPoints.length === 0) {
+      return;
+    }
+
+    const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+    const interval = window.setInterval(async () => {
+      const currentTime = await playerRef.current?.getCurrentTime();
+
+      if (typeof currentTime !== "number") {
+        return;
+      }
+
+      const checkpoint = sortedDecisionPoints.find(
+        (point) =>
+          !handledCheckpointIdsRef.current.has(point.id) && currentTime >= point.timestampSeconds
+      );
+
+      if (!checkpoint) {
+        return;
+      }
+
+      handledCheckpointIdsRef.current.add(checkpoint.id);
+      await playerRef.current?.pause();
+      setTimestampSeconds(checkpoint.timestampSeconds);
+      setMessage(
+        pendingAnnotation
+          ? "Checkpoint reached. Record the verdict for your previous play."
+          : "Checkpoint reached. Add your annotation for this decision."
+      );
+    }, 750);
+
+    return () => window.clearInterval(interval);
+  }, [decisionPoints, pendingAnnotation]);
 
   function handleAnnotation(formData: FormData) {
     setMessage(null);

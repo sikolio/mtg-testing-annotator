@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
+import React, { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewerWorkspace } from "./ReviewerWorkspace";
 
@@ -33,6 +33,7 @@ const playerConstructor = vi.fn((_element: HTMLElement, options: { events?: { on
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   playerState.getCurrentTime.mockClear();
   playerState.pauseVideo.mockClear();
   playerConstructor.mockClear();
@@ -53,5 +54,36 @@ describe("ReviewerWorkspace", () => {
     await waitFor(() => expect(screen.getByLabelText("Current timestamp")).toHaveValue(42.37));
     expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
     expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
+  });
+
+  it("autopauses when playback reaches a community checkpoint", async () => {
+    vi.useFakeTimers();
+    (window as { YT?: unknown }).YT = { Player: playerConstructor };
+    playerState.getCurrentTime
+      .mockReturnValueOnce(9.6)
+      .mockReturnValueOnce(10.2);
+
+    render(
+      <ReviewerWorkspace
+        session={session}
+        user={user}
+        decisionPoints={[
+          {
+            id: "checkpoint-1",
+            sessionId: session.id,
+            timestampSeconds: 10,
+            source: "manual_annotation"
+          }
+        ]}
+      />
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1600);
+    });
+
+    expect(screen.getByLabelText("Current timestamp")).toHaveValue(10);
+    expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
+    expect(playerState.getCurrentTime).toHaveBeenCalledTimes(2);
   });
 });
