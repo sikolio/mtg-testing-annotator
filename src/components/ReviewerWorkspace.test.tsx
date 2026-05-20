@@ -14,6 +14,7 @@ const session = {
   id: "session-1",
   youtubeVideoId: "LBkEDKfWpaA",
   decklistText: "4 Lightning Bolt",
+  opponentDecklistText: "4 Thoughtseize",
   handBlocks: []
 };
 

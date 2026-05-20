@@ -26,6 +26,7 @@ describe("localStore", () => {
         youtubeUrl: "https://www.youtube.com/watch?v=LBkEDKfWpaA",
         youtubeVideoId: "LBkEDKfWpaA",
         decklistText: "4 Lightning Bolt",
+        opponentDecklistText: "4 Thoughtseize",
         handBlockEnabled: true,
         handBlockX: 3,
         handBlockY: 70,
@@ -47,6 +48,7 @@ describe("localStore", () => {
     const presenterSession = await getLocalPresenterSession(links.presenterPath.split("/").pop() ?? "");
 
     expect(reviewerSession?.session.decklist_text).toBe("4 Lightning Bolt");
+    expect(reviewerSession?.session.opponent_decklist_text).toBe("4 Thoughtseize");
     expect(reviewerSession?.user?.email).toBe("reviewer@example.com");
     expect(presenterSession?.session.hand_block_width).toBe(94);
     expect(presenterSession?.session.hand_block_2_enabled).toBe(true);

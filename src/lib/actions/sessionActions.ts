@@ -43,6 +43,7 @@ export async function createReviewSession(input: CreateSessionInput) {
       youtube_url: payload.youtubeUrl,
       youtube_video_id: payload.youtubeVideoId,
       decklist_text: payload.decklistText,
+      opponent_decklist_text: payload.opponentDecklistText,
       hand_block_enabled: payload.handBlockEnabled,
       hand_block_x: payload.handBlockX,
       hand_block_y: payload.handBlockY,

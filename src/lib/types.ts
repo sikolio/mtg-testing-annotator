@@ -30,6 +30,7 @@ export type ReviewSession = {
   youtubeUrl: string;
   youtubeVideoId: string;
   decklistText: string;
+  opponentDecklistText: string;
   handBlocks: HandBlock[];
 };
 

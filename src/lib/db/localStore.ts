@@ -18,6 +18,7 @@ type LocalSession = {
   youtube_url: string;
   youtube_video_id: string;
   decklist_text: string;
+  opponent_decklist_text: string;
   hand_block_enabled: boolean;
   hand_block_x: number;
   hand_block_y: number;
@@ -82,6 +83,7 @@ type CreateLocalPayload = {
   youtubeUrl: string;
   youtubeVideoId: string;
   decklistText: string;
+  opponentDecklistText: string;
   handBlockEnabled: boolean;
   handBlockX: number;
   handBlockY: number;
@@ -166,6 +168,7 @@ export async function createLocalReviewSession({
     youtube_url: payload.youtubeUrl,
     youtube_video_id: payload.youtubeVideoId,
     decklist_text: payload.decklistText,
+    opponent_decklist_text: payload.opponentDecklistText,
     hand_block_enabled: payload.handBlockEnabled,
     hand_block_x: payload.handBlockX,
     hand_block_y: payload.handBlockY,

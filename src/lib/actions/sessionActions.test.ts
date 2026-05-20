@@ -7,6 +7,7 @@ describe("buildCreateSessionPayload", () => {
       presenterEmail: " Player@One.COM ",
       youtubeUrl: "https://www.youtube.com/watch?v=LBkEDKfWpaA",
       decklistText: "4 Lightning Bolt",
+      opponentDecklistText: " 4 Thoughtseize ",
       handBlockEnabled: false,
       handBlockX: 0,
       handBlockY: 0,
@@ -21,6 +22,7 @@ describe("buildCreateSessionPayload", () => {
 
     expect(payload.presenterEmail).toBe("player@one.com");
     expect(payload.youtubeVideoId).toBe("LBkEDKfWpaA");
+    expect(payload.opponentDecklistText).toBe("4 Thoughtseize");
     expect(payload.handBlock2Enabled).toBe(true);
     expect(payload.handBlock2Width).toBe(30);
   });
@@ -31,6 +33,7 @@ describe("buildCreateSessionPayload", () => {
         presenterEmail: "player@example.com",
         youtubeUrl: "https://www.youtube.com/watch?v=LBkEDKfWpaA",
         decklistText: " ",
+        opponentDecklistText: "",
         handBlockEnabled: false,
         handBlockX: 0,
         handBlockY: 0,

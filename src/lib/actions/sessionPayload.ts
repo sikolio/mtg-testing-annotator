@@ -5,6 +5,7 @@ const createSessionSchema = z.object({
   presenterEmail: z.string().trim().email(),
   youtubeUrl: z.string().trim().min(1),
   decklistText: z.string().trim().min(1, "Decklist is required."),
+  opponentDecklistText: z.string().trim().default(""),
   handBlockEnabled: z.boolean(),
   handBlockX: z.coerce.number().min(0).max(100),
   handBlockY: z.coerce.number().min(0).max(100),
@@ -24,6 +25,7 @@ export function buildCreateSessionPayload(input: CreateSessionInput) {
     ...input,
     presenterEmail: input.presenterEmail.trim().toLowerCase(),
     decklistText: input.decklistText.trim(),
+    opponentDecklistText: input.opponentDecklistText?.trim() ?? "",
     youtubeUrl: input.youtubeUrl.trim()
   });
 

@@ -10,6 +10,7 @@ type PresenterWorkspaceProps = {
   session: {
     youtubeVideoId: string;
     decklistText: string;
+    opponentDecklistText: string;
     handBlocks: HandBlock[];
   };
   decisionPoints: DecisionPoint[];
@@ -46,7 +47,10 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
       </section>
 
       <section className="review-side">
-        <DecklistPanel decklistText={session.decklistText} />
+        <DecklistPanel
+          decklistText={session.decklistText}
+          opponentDecklistText={session.opponentDecklistText}
+        />
         <div className="panel">
           <div className="presentation-header">
             <h2>{activePoint ? `Options at ${activePoint.timestampSeconds.toFixed(2)}s` : "No decisions yet"}</h2>

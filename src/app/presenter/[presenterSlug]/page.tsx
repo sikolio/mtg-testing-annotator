@@ -19,6 +19,7 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
         session={{
           youtubeVideoId: local.session.youtube_video_id,
           decklistText: local.session.decklist_text,
+          opponentDecklistText: local.session.opponent_decklist_text,
           handBlocks: [
             {
               enabled: local.session.hand_block_enabled,
@@ -87,6 +88,7 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
       session={{
         youtubeVideoId: session.youtube_video_id,
         decklistText: session.decklist_text,
+        opponentDecklistText: session.opponent_decklist_text ?? "",
         handBlocks: [
           {
             enabled: session.hand_block_enabled,

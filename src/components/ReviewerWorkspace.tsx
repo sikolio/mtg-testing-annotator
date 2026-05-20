@@ -12,6 +12,7 @@ type ReviewerWorkspaceProps = {
     id: string;
     youtubeVideoId: string;
     decklistText: string;
+    opponentDecklistText: string;
     handBlocks: HandBlock[];
   };
   user: {
@@ -131,7 +132,10 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
       </section>
 
       <section className="review-side">
-        <DecklistPanel decklistText={session.decklistText} />
+        <DecklistPanel
+          decklistText={session.decklistText}
+          opponentDecklistText={session.opponentDecklistText}
+        />
 
         <div className="panel">
           <h2>{pendingAnnotation ? "Video verdict" : "Your play"}</h2>

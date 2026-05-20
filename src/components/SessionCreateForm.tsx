@@ -42,6 +42,7 @@ export function SessionCreateForm() {
           presenterEmail: String(formData.get("presenterEmail") ?? ""),
           youtubeUrl,
           decklistText: String(formData.get("decklistText") ?? ""),
+          opponentDecklistText: String(formData.get("opponentDecklistText") ?? ""),
           handBlockEnabled,
           handBlockX: Number(handBlockX || 0),
           handBlockY: Number(handBlockY || 0),
@@ -75,6 +76,15 @@ export function SessionCreateForm() {
       <label>
         Decklist
         <textarea name="decklistText" required rows={12} placeholder={"4 Lightning Bolt\n4 Ragavan, Nimble Pilferer"} />
+      </label>
+
+      <label>
+        Opponent decklist
+        <textarea
+          name="opponentDecklistText"
+          rows={12}
+          placeholder={"4 Thoughtseize\n4 Orcish Bowmasters"}
+        />
       </label>
 
       <label className="inline-check">
