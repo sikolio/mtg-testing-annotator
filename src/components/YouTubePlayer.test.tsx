@@ -1,71 +1,63 @@
 import "@testing-library/jest-dom/vitest";
 import { render, waitFor } from "@testing-library/react";
-import React, { act, createRef } from "react";
+import React, { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { YouTubePlayer, type YouTubePlayerHandle } from "./YouTubePlayer";
 
-const playerState = {
-  getCurrentTime: vi.fn(() => 37.91),
-  pauseVideo: vi.fn(),
-  seekTo: vi.fn()
-};
+const { playerFactory, playerState } = vi.hoisted(() => {
+  const state = {
+    destroy: vi.fn(),
+    getCurrentTime: vi.fn(() => Promise.resolve(37.91)),
+    pauseVideo: vi.fn(() => Promise.resolve()),
+    seekTo: vi.fn(() => Promise.resolve())
+  };
 
-let latestPlayerEvents:
-  | {
-      onReady?: (event: { target: typeof playerState }) => void;
-      onStateChange?: (event: { data: number; target: typeof playerState }) => void;
-    }
-  | undefined;
+  return {
+    playerFactory: vi.fn(() => state),
+    playerState: state
+  };
+});
 
-const playerConstructor = vi.fn(
-  (
-    _element: HTMLElement,
-    options: {
-      events?: {
-        onReady?: (event: { target: typeof playerState }) => void;
-        onStateChange?: (event: { data: number; target: typeof playerState }) => void;
-      };
-    }
-  ) => {
-    latestPlayerEvents = options.events;
-  options.events?.onReady?.({ target: playerState });
-  return playerState;
-  }
-);
+vi.mock("youtube-player", () => ({
+  default: playerFactory
+}));
 
 afterEach(() => {
-  vi.useRealTimers();
+  playerState.destroy.mockClear();
   playerState.getCurrentTime.mockClear();
   playerState.pauseVideo.mockClear();
-  playerConstructor.mockClear();
-  latestPlayerEvents = undefined;
-  delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).YT;
-  delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).onYouTubeIframeAPIReady;
-  document.head.innerHTML = "";
+  playerState.seekTo.mockClear();
+  playerFactory.mockClear();
 });
 
 describe("YouTubePlayer", () => {
   it("starts paused and can read the exact current time", async () => {
-    (window as { YT?: unknown }).YT = { Player: playerConstructor };
     const ref = createRef<YouTubePlayerHandle>();
 
     render(<YouTubePlayer ref={ref} videoId="LBkEDKfWpaA" handBlocks={[]} />);
 
-    await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(playerFactory).toHaveBeenCalledTimes(1));
 
     await expect(ref.current?.getCurrentTime()).resolves.toBe(37.91);
 
+    expect(playerFactory).toHaveBeenCalledWith(expect.any(HTMLDivElement), {
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        rel: 0
+      },
+      videoId: "LBkEDKfWpaA"
+    });
     expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
     expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
   });
 
   it("seeks to a timestamp and pauses there", async () => {
-    (window as { YT?: unknown }).YT = { Player: playerConstructor };
     const ref = createRef<YouTubePlayerHandle>();
 
     render(<YouTubePlayer ref={ref} videoId="LBkEDKfWpaA" handBlocks={[]} />);
 
-    await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(playerFactory).toHaveBeenCalledTimes(1));
     await ref.current?.seekTo(15.25);
 
     expect(playerState.seekTo).toHaveBeenCalledWith(15.25, true);

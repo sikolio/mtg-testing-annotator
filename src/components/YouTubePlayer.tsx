@@ -1,78 +1,22 @@
 "use client";
 
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import youTubePlayer from "youtube-player";
 import { HandBlockOverlay } from "@/components/HandBlockOverlay";
 import type { HandBlock } from "@/lib/types";
 
 type YouTubePlayerInstance = {
-  destroy?: () => void;
-  getCurrentTime: () => number;
-  pauseVideo: () => void;
-  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
+  destroy?: () => Promise<void> | void;
+  getCurrentTime: () => Promise<number>;
+  pauseVideo: () => Promise<void>;
+  seekTo: (seconds: number, allowSeekAhead?: boolean) => Promise<void>;
 };
-
-type YouTubePlayerReadyEvent = {
-  target: YouTubePlayerInstance;
-};
-
-type YouTubePlayerConstructor = new (
-  element: HTMLElement,
-  options: {
-    events?: {
-      onReady?: (event: YouTubePlayerReadyEvent) => void;
-    };
-    height?: string;
-    playerVars?: Record<string, number | string>;
-    videoId: string;
-    width?: string;
-  }
-) => YouTubePlayerInstance;
-
-declare global {
-  interface Window {
-    YT?: {
-      Player: YouTubePlayerConstructor;
-    };
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
 
 export type YouTubePlayerHandle = {
   getCurrentTime: () => Promise<number>;
   pause: () => Promise<void>;
   seekTo: (seconds: number) => Promise<void>;
 };
-
-let youtubeIframeApiPromise: Promise<YouTubePlayerConstructor> | null = null;
-
-function loadYouTubeIframeApi() {
-  if (window.YT?.Player) {
-    return Promise.resolve(window.YT.Player);
-  }
-
-  if (youtubeIframeApiPromise) {
-    return youtubeIframeApiPromise;
-  }
-
-  youtubeIframeApiPromise = new Promise((resolve) => {
-    const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
-
-    window.onYouTubeIframeAPIReady = () => {
-      if (window.YT?.Player) {
-        resolve(window.YT.Player);
-      }
-    };
-
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.src = "https://www.youtube.com/iframe_api";
-      script.async = true;
-      document.head.appendChild(script);
-    }
-  });
-
-  return youtubeIframeApiPromise;
-}
 
 export const YouTubePlayer = forwardRef<
   YouTubePlayerHandle,
@@ -84,60 +28,44 @@ export const YouTubePlayer = forwardRef<
 >(function YouTubePlayer({ videoId, handBlocks, title = "Review video" }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayerInstance | null>(null);
-  const playerReadyPromiseRef = useRef<Promise<YouTubePlayerInstance> | null>(null);
 
   async function getReadyPlayer() {
-    if (!playerReadyPromiseRef.current) {
+    const player = playerRef.current;
+
+    if (!player) {
       throw new Error("YouTube player is not ready yet.");
     }
 
-    return playerReadyPromiseRef.current;
+    return player;
   }
 
   useEffect(() => {
-    let cancelled = false;
+    if (!hostRef.current) {
+      return;
+    }
 
-    playerReadyPromiseRef.current = (async () => {
-      const Player = await loadYouTubeIframeApi();
-
-      if (cancelled || !hostRef.current) {
-        throw new Error("YouTube player was unmounted before initialization.");
+    const player = youTubePlayer(hostRef.current, {
+      videoId,
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        rel: 0
       }
+    });
 
-      return new Promise<YouTubePlayerInstance>((resolve) => {
-        const player = new Player(hostRef.current as HTMLElement, {
-          videoId,
-          width: "100%",
-          height: "100%",
-          playerVars: {
-            enablejsapi: 1,
-            rel: 0
-          },
-          events: {
-            onReady: (event) => {
-              playerRef.current = event.target;
-              event.target.pauseVideo();
-              resolve(event.target);
-            }
-          }
-        });
-
-        playerRef.current = player;
-      });
-    })();
+    playerRef.current = player;
+    void player.pauseVideo();
 
     return () => {
-      cancelled = true;
-      playerRef.current?.destroy?.();
+      void player.destroy?.();
       playerRef.current = null;
-      playerReadyPromiseRef.current = null;
     };
   }, [videoId]);
 
   useImperativeHandle(ref, () => ({
     async pause() {
       const player = await getReadyPlayer();
-      player.pauseVideo();
+      await player.pauseVideo();
     },
     async getCurrentTime() {
       const player = await getReadyPlayer();
@@ -145,14 +73,14 @@ export const YouTubePlayer = forwardRef<
     },
     async seekTo(seconds: number) {
       const player = await getReadyPlayer();
-      player.seekTo(seconds, true);
-      player.pauseVideo();
+      await player.seekTo(seconds, true);
+      await player.pauseVideo();
     }
   }));
 
   return (
-    <div className="video-frame">
-      <div ref={hostRef} aria-label={title} />
+    <div className="video-frame" aria-label={title}>
+      <div ref={hostRef} />
       <HandBlockOverlay blocks={handBlocks} />
     </div>
   );

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React, { act } from "react";
+import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewerWorkspace } from "./ReviewerWorkspace";
 
@@ -23,49 +23,34 @@ const user = {
   email: "player@example.com"
 };
 
-const playerState = {
-  getCurrentTime: vi.fn(() => 42.37),
-  pauseVideo: vi.fn(),
-  seekTo: vi.fn()
-};
+const { playerFactory, playerState } = vi.hoisted(() => {
+  const state = {
+    destroy: vi.fn(),
+    getCurrentTime: vi.fn(() => Promise.resolve(42.37)),
+    pauseVideo: vi.fn(() => Promise.resolve()),
+    seekTo: vi.fn(() => Promise.resolve())
+  };
 
-let latestPlayerEvents:
-  | {
-      onReady?: (event: { target: typeof playerState }) => void;
-      onStateChange?: (event: { data: number; target: typeof playerState }) => void;
-    }
-  | undefined;
+  return {
+    playerFactory: vi.fn(() => state),
+    playerState: state
+  };
+});
 
-const playerConstructor = vi.fn(
-  (
-    _element: HTMLElement,
-    options: {
-      events?: {
-        onReady?: (event: { target: typeof playerState }) => void;
-        onStateChange?: (event: { data: number; target: typeof playerState }) => void;
-      };
-    }
-  ) => {
-    latestPlayerEvents = options.events;
-    options.events?.onReady?.({ target: playerState });
-    return playerState;
-  }
-);
+vi.mock("youtube-player", () => ({
+  default: playerFactory
+}));
 
 afterEach(() => {
-  vi.useRealTimers();
+  playerState.destroy.mockClear();
   playerState.getCurrentTime.mockClear();
   playerState.pauseVideo.mockClear();
-  playerConstructor.mockClear();
-  latestPlayerEvents = undefined;
-  delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).YT;
-  delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).onYouTubeIframeAPIReady;
-  document.head.innerHTML = "";
+  playerState.seekTo.mockClear();
+  playerFactory.mockClear();
 });
 
 describe("ReviewerWorkspace", () => {
   it("pauses the video and copies the exact current player timestamp into the annotation field", async () => {
-    (window as { YT?: unknown }).YT = { Player: playerConstructor };
     const userEventApi = userEvent.setup();
 
     render(<ReviewerWorkspace session={session} user={user} decisionPoints={[]} />);
@@ -78,7 +63,6 @@ describe("ReviewerWorkspace", () => {
   });
 
   it("jumps to a decision point and pauses there when clicked", async () => {
-    (window as { YT?: unknown }).YT = { Player: playerConstructor };
     const userEventApi = userEvent.setup();
 
     render(
@@ -96,7 +80,7 @@ describe("ReviewerWorkspace", () => {
       />
     );
 
-    await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(playerFactory).toHaveBeenCalledTimes(1));
     await userEventApi.click(screen.getByRole("button", { name: "Jump to 10.00s" }));
 
     expect(screen.getByLabelText("Current timestamp")).toHaveValue(10);
