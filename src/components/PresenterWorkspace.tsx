@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React from "react";
+import { useMemo, useRef, useState } from "react";
 import { CardHoverText } from "@/components/CardHoverText";
 import { DecklistPanel } from "@/components/DecklistPanel";
-import { YouTubePlayer } from "@/components/YouTubePlayer";
+import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { parseDecklistCardNames } from "@/lib/domain/decklist";
 import { groupAnnotationsForPresentation } from "@/lib/domain/presentation";
 import type { Annotation, DecisionPoint, HandBlock } from "@/lib/types";
@@ -19,17 +20,47 @@ type PresenterWorkspaceProps = {
   annotations: Annotation[];
 };
 
+function formatCheckpointTime(timestampSeconds: number) {
+  const minutes = Math.floor(timestampSeconds / 60);
+  const seconds = timestampSeconds - minutes * 60;
+  return `${minutes}:${seconds.toFixed(2).padStart(5, "0")}`;
+}
+
 export function PresenterWorkspace({ session, decisionPoints, annotations }: PresenterWorkspaceProps) {
+  const playerRef = useRef<YouTubePlayerHandle | null>(null);
   const [activeDecisionPointId, setActiveDecisionPointId] = useState(decisionPoints[0]?.id ?? "");
   const [showIdentities, setShowIdentities] = useState(false);
 
-  const activeAnnotations = annotations.filter((annotation) => annotation.decisionPointId === activeDecisionPointId);
+  const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+  const activeDecisionPointIndex = sortedDecisionPoints.findIndex((point) => point.id === activeDecisionPointId);
+  const activePoint =
+    activeDecisionPointIndex >= 0 ? sortedDecisionPoints[activeDecisionPointIndex] : sortedDecisionPoints[0] ?? null;
+  const activeAnnotations = annotations.filter((annotation) => annotation.decisionPointId === activePoint?.id);
   const groups = useMemo(() => groupAnnotationsForPresentation(activeAnnotations), [activeAnnotations]);
-  const activePoint = decisionPoints.find((point) => point.id === activeDecisionPointId);
   const cardNames = useMemo(
     () => [...new Set([...parseDecklistCardNames(session.decklistText), ...parseDecklistCardNames(session.opponentDecklistText)])],
     [session.decklistText, session.opponentDecklistText]
   );
+
+  async function handleDecisionPointChange(point: DecisionPoint) {
+    setActiveDecisionPointId(point.id);
+    await playerRef.current?.seekTo(point.timestampSeconds);
+  }
+
+  async function handleCheckpointStep(direction: -1 | 1) {
+    if (sortedDecisionPoints.length === 0) {
+      return;
+    }
+
+    const currentIndex = activeDecisionPointIndex >= 0 ? activeDecisionPointIndex : 0;
+    const nextPoint = sortedDecisionPoints[currentIndex + direction];
+
+    if (!nextPoint) {
+      return;
+    }
+
+    await handleDecisionPointChange(nextPoint);
+  }
 
   return (
     <main className="workspace">
@@ -42,18 +73,46 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
       </aside>
 
       <section className="review-main">
-        <YouTubePlayer videoId={session.youtubeVideoId} handBlocks={session.handBlocks} title="Presentation video" />
-        <div className="panel">
-          <h2>Decision points</h2>
-          <div className="decision-rail">
-            {decisionPoints.map((point) => (
+        <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} title="Presentation video" />
+        <div className="panel checkpoint-panel">
+          <div className="checkpoint-summary">
+            <h2>Decision points</h2>
+            {activePoint ? (
+              <span className="checkpoint-current">
+                {`Checkpoint ${Math.max(activeDecisionPointIndex, 0) + 1} of ${sortedDecisionPoints.length}: ${formatCheckpointTime(activePoint.timestampSeconds)}`}
+              </span>
+            ) : null}
+          </div>
+          <div className="checkpoint-nav">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void handleCheckpointStep(-1)}
+              disabled={(activeDecisionPointIndex >= 0 ? activeDecisionPointIndex : 0) === 0}
+            >
+              Previous checkpoint
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void handleCheckpointStep(1)}
+              disabled={
+                sortedDecisionPoints.length === 0 ||
+                (activeDecisionPointIndex >= 0 ? activeDecisionPointIndex : 0) === sortedDecisionPoints.length - 1
+              }
+            >
+              Next checkpoint
+            </button>
+          </div>
+          <div className="checkpoint-list" role="list" aria-label="Presentation checkpoints">
+            {sortedDecisionPoints.map((point) => (
               <button
                 key={point.id}
                 type="button"
-                className={point.id === activeDecisionPointId ? "secondary active" : "secondary"}
-                onClick={() => setActiveDecisionPointId(point.id)}
+                className={point.id === activePoint?.id ? "secondary active checkpoint-item" : "secondary checkpoint-item"}
+                onClick={() => void handleDecisionPointChange(point)}
               >
-                {point.timestampSeconds.toFixed(2)}s
+                {formatCheckpointTime(point.timestampSeconds)}
               </button>
             ))}
           </div>
@@ -67,7 +126,7 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
         />
         <div className="panel">
           <div className="presentation-header">
-            <h2>{activePoint ? `Options at ${activePoint.timestampSeconds.toFixed(2)}s` : "No decisions yet"}</h2>
+            <h2>{activePoint ? `Options at ${formatCheckpointTime(activePoint.timestampSeconds)}` : "No decisions yet"}</h2>
             <label className="inline-check">
               <input
                 type="checkbox"
