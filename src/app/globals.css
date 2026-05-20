@@ -102,6 +102,15 @@ textarea {
   gap: 8px;
 }
 
+.block-settings {
+  display: grid;
+  gap: 10px;
+}
+
+.block-preview {
+  max-width: 560px;
+}
+
 button {
   border: 0;
   border-radius: 6px;
@@ -156,6 +165,13 @@ button:disabled {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.video-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .hand-block {

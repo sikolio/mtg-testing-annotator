@@ -1,8 +1,10 @@
 "use client";
 
+import React from "react";
 import { useState, useTransition } from "react";
 import { createReviewSession } from "@/lib/actions/sessionActions";
 import { DEFAULT_YOUTUBE_URL } from "@/lib/config";
+import { parseYouTubeVideoId } from "@/lib/domain/youtube";
 
 type CreatedLinks = {
   reviewerPath: string;
@@ -14,6 +16,18 @@ export function SessionCreateForm() {
   const [error, setError] = useState<string | null>(null);
   const [links, setLinks] = useState<CreatedLinks | null>(null);
   const [handBlockEnabled, setHandBlockEnabled] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState(DEFAULT_YOUTUBE_URL);
+  const [handBlockX, setHandBlockX] = useState("3");
+  const [handBlockY, setHandBlockY] = useState("68");
+  const [handBlockWidth, setHandBlockWidth] = useState("38");
+  const [handBlockHeight, setHandBlockHeight] = useState("24");
+
+  let previewVideoId: string | null = null;
+  try {
+    previewVideoId = parseYouTubeVideoId(youtubeUrl);
+  } catch {
+    previewVideoId = null;
+  }
 
   function onSubmit(formData: FormData) {
     setError(null);
@@ -21,13 +35,13 @@ export function SessionCreateForm() {
       try {
         const result = await createReviewSession({
           presenterEmail: String(formData.get("presenterEmail") ?? ""),
-          youtubeUrl: String(formData.get("youtubeUrl") ?? ""),
+          youtubeUrl,
           decklistText: String(formData.get("decklistText") ?? ""),
           handBlockEnabled,
-          handBlockX: Number(formData.get("handBlockX") ?? 0),
-          handBlockY: Number(formData.get("handBlockY") ?? 0),
-          handBlockWidth: Number(formData.get("handBlockWidth") ?? 0),
-          handBlockHeight: Number(formData.get("handBlockHeight") ?? 0)
+          handBlockX: Number(handBlockX || 0),
+          handBlockY: Number(handBlockY || 0),
+          handBlockWidth: Number(handBlockWidth || 0),
+          handBlockHeight: Number(handBlockHeight || 0)
         });
         setLinks(result);
       } catch (caught) {
@@ -45,7 +59,7 @@ export function SessionCreateForm() {
 
       <label>
         YouTube URL
-        <input name="youtubeUrl" required defaultValue={DEFAULT_YOUTUBE_URL} />
+        <input name="youtubeUrl" required value={youtubeUrl} onChange={(event) => setYoutubeUrl(event.target.value)} />
       </label>
 
       <label>
@@ -63,25 +77,67 @@ export function SessionCreateForm() {
       </label>
 
       {handBlockEnabled ? (
-        <div className="block-grid">
-          <input name="handBlockX" type="number" min="0" max="100" defaultValue="3" aria-label="Block x percent" />
-          <input name="handBlockY" type="number" min="0" max="100" defaultValue="68" aria-label="Block y percent" />
-          <input
-            name="handBlockWidth"
-            type="number"
-            min="0"
-            max="100"
-            defaultValue="38"
-            aria-label="Block width percent"
-          />
-          <input
-            name="handBlockHeight"
-            type="number"
-            min="0"
-            max="100"
-            defaultValue="24"
-            aria-label="Block height percent"
-          />
+        <div className="block-settings">
+          {previewVideoId ? (
+            <div className="video-frame block-preview">
+              <img
+                title="Hand-hidden-block positioning preview"
+                src={`https://i.ytimg.com/vi/${previewVideoId}/hqdefault.jpg`}
+                alt=""
+              />
+              <div
+                className="hand-block"
+                style={{
+                  left: `${Number(handBlockX || 0)}%`,
+                  top: `${Number(handBlockY || 0)}%`,
+                  width: `${Number(handBlockWidth || 0)}%`,
+                  height: `${Number(handBlockHeight || 0)}%`
+                }}
+                aria-label="Preview hidden hand information"
+              />
+            </div>
+          ) : (
+            <p className="error-text">Enter a valid YouTube URL to preview the block.</p>
+          )}
+
+          <div className="block-grid">
+            <input
+              name="handBlockX"
+              type="number"
+              min="0"
+              max="100"
+              value={handBlockX}
+              onChange={(event) => setHandBlockX(event.target.value)}
+              aria-label="Block x percent"
+            />
+            <input
+              name="handBlockY"
+              type="number"
+              min="0"
+              max="100"
+              value={handBlockY}
+              onChange={(event) => setHandBlockY(event.target.value)}
+              aria-label="Block y percent"
+            />
+            <input
+              name="handBlockWidth"
+              type="number"
+              min="0"
+              max="100"
+              value={handBlockWidth}
+              onChange={(event) => setHandBlockWidth(event.target.value)}
+              aria-label="Block width percent"
+            />
+            <input
+              name="handBlockHeight"
+              type="number"
+              min="0"
+              max="100"
+              value={handBlockHeight}
+              onChange={(event) => setHandBlockHeight(event.target.value)}
+              aria-label="Block height percent"
+            />
+          </div>
         </div>
       ) : null}
 
