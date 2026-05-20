@@ -20,7 +20,7 @@ A private-link review tool for Magic: The Gathering teams to annotate gameplay v
    npm run dev
    ```
 
-If Supabase variables are missing, the app uses local development storage at `.data/dev-db.json`.
+If Supabase variables are missing, the app uses local development storage at `.data/dev-db.json`; production deployments require Supabase environment variables.
 
 ## MVP behavior
 
