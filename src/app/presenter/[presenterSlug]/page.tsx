@@ -1,10 +1,55 @@
 import { notFound } from "next/navigation";
 import { PresenterWorkspace } from "@/components/PresenterWorkspace";
-import { createSupabaseServerClient } from "@/lib/db/server";
+import { getLocalPresenterSession } from "@/lib/db/localStore";
+import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/db/server";
 import type { ActionType, AnnotationVerdict } from "@/lib/types";
 
 export default async function PresenterPage({ params }: { params: Promise<{ presenterSlug: string }> }) {
   const { presenterSlug } = await params;
+
+  if (!hasSupabaseServerConfig()) {
+    const local = await getLocalPresenterSession(presenterSlug);
+
+    if (!local) {
+      notFound();
+    }
+
+    return (
+      <PresenterWorkspace
+        session={{
+          youtubeVideoId: local.session.youtube_video_id,
+          decklistText: local.session.decklist_text,
+          handBlock: {
+            enabled: local.session.hand_block_enabled,
+            x: Number(local.session.hand_block_x),
+            y: Number(local.session.hand_block_y),
+            width: Number(local.session.hand_block_width),
+            height: Number(local.session.hand_block_height)
+          }
+        }}
+        decisionPoints={local.decisionPoints.map((point) => ({
+          id: point.id,
+          sessionId: point.session_id,
+          timestampSeconds: Number(point.timestamp_seconds),
+          source: point.source
+        }))}
+        annotations={local.annotations.map((annotation) => ({
+          id: annotation.id,
+          sessionId: annotation.session_id,
+          decisionPointId: annotation.decision_point_id,
+          userId: annotation.user_id,
+          reviewerEmail: annotation.reviewer_email,
+          originalTimestampSeconds: Number(annotation.original_timestamp_seconds),
+          actionType: annotation.action_type,
+          actionText: annotation.action_text,
+          argumentsText: annotation.arguments_text,
+          lockedAt: annotation.locked_at,
+          verdict: annotation.verdict
+        }))}
+      />
+    );
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { data: session } = await supabase

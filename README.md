@@ -10,15 +10,17 @@ A private-link review tool for Magic: The Gathering teams to annotate gameplay v
    npm install
    ```
 
-2. Create `.env.local` from `.env.example` and fill in Supabase values.
+2. Optional: create `.env.local` from `.env.example` and fill in Supabase values.
 
-3. Apply `supabase/migrations/0001_initial_schema.sql` to the Supabase project.
+3. Optional: apply `supabase/migrations/0001_initial_schema.sql` to the Supabase project.
 
 4. Start the app:
 
    ```bash
    npm run dev
    ```
+
+If Supabase variables are missing, the app uses local development storage at `.data/dev-db.json`.
 
 ## MVP behavior
 

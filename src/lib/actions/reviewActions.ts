@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { CHECKPOINT_MERGE_THRESHOLD_SECONDS } from "@/lib/config";
-import { createSupabaseServerClient } from "@/lib/db/server";
+import { commitLocalAnnotation, mergeLocalDecisionPoints, submitLocalVerdict } from "@/lib/db/localStore";
+import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/db/server";
 import { findNearestDecisionPoint, normalizeTimestampSeconds } from "@/lib/domain/checkpoints";
 import { ACTION_TYPES, VERDICTS } from "@/lib/types";
 
@@ -17,6 +18,11 @@ const annotationSchema = z.object({
 
 export async function commitAnnotation(input: z.input<typeof annotationSchema>) {
   const payload = annotationSchema.parse(input);
+
+  if (!hasSupabaseServerConfig()) {
+    return commitLocalAnnotation(payload);
+  }
+
   const supabase = createSupabaseServerClient();
   const normalizedTimestamp = normalizeTimestampSeconds(payload.timestampSeconds);
 
@@ -88,6 +94,12 @@ const verdictSchema = z.object({
 
 export async function submitVerdict(input: z.input<typeof verdictSchema>) {
   const payload = verdictSchema.parse(input);
+
+  if (!hasSupabaseServerConfig()) {
+    await submitLocalVerdict(payload);
+    return;
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("annotation_verdicts").upsert({
@@ -109,6 +121,12 @@ const mergeSchema = z.object({
 
 export async function mergeDecisionPoints(input: z.input<typeof mergeSchema>) {
   const payload = mergeSchema.parse(input);
+
+  if (!hasSupabaseServerConfig()) {
+    await mergeLocalDecisionPoints(payload);
+    return;
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { error: updateError } = await supabase
