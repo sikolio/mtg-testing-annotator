@@ -26,7 +26,6 @@ Out of scope for the MVP:
 - Uploaded videos.
 - Parsed decklist card rows.
 - Dynamic or time-ranged hand-hidden-block overlays.
-- AI clustering or normalization of free-text play descriptions.
 - Full MTG rules validation.
 
 ## Architecture
@@ -123,10 +122,15 @@ Fields:
 - `action_type`
 - `action_text`
 - `arguments_text`
+- `aggregation_cluster_id` nullable
+- `aggregated_action_label` nullable
+- `aggregation_version` nullable
+- `aggregated_at` nullable
 - `locked_at`
 - `created_at`
 
 The locked fields are `original_timestamp_seconds`, `action_type`, `action_text`, and `arguments_text`. After `locked_at` is set, these values are not editable through the UI or API.
+Aggregation metadata is presenter-generated session analysis. It may be refreshed later, but it never overwrites reviewer-authored text.
 
 Action types in MVP:
 
@@ -227,7 +231,33 @@ For each decision point, the presenter can:
 - see verdict counts for same play, different play, and unclear,
 - merge nearby decision points that represent the same decision.
 
-Grouping in MVP is deterministic: same decision point plus same action type. Free-text arguments remain visible inside the group. AI-assisted clustering can be added later after real annotation data exists.
+Presentation mode seeds aggregation for the whole session on first load. The app scans all session annotations, groups them by decision point, and runs one LLM aggregation pass per decision point that has missing or stale aggregation data.
+
+For each decision point, the LLM receives the raw reviewer play text and returns:
+
+- a cluster assignment for each annotation,
+- a short canonical label for each cluster,
+- no edits to reviewer-authored action text or arguments.
+
+The app persists the returned cluster metadata onto the source annotations. Presenter mode prefers these stored clusters for grouping and falls back to deterministic grouping by decision point plus action type when aggregation is unavailable or fails.
+
+Aggregation scope is always one decision point at a time, even when that decision point was created from nearby merged timestamps. This keeps grouping local to the actual strategic moment being discussed.
+
+Aggregation runs for the whole session when presenter mode loads, not lazily per selected decision point. This keeps presenter navigation fast after the initial seed and avoids recomputing clusters on each checkpoint change.
+
+Aggregation freshness is controlled by `aggregation_version`. When the prompt, model, or output contract changes, the app can mark prior clusters stale by bumping the version and re-running aggregation. A later presenter control can trigger this refresh manually.
+
+## Aggregation Pipeline
+
+The aggregation flow is intentionally presenter-seeded rather than reviewer-blocking.
+
+1. Reviewer annotations are saved normally with no LLM dependency.
+2. When presenter mode loads, the app checks all annotations in the session for missing or stale aggregation metadata.
+3. For each affected decision point, the app calls the aggregation service once with that point's annotations.
+4. The service writes `aggregation_cluster_id`, `aggregated_action_label`, `aggregation_version`, and `aggregated_at` back to the annotations.
+5. Presenter UI renders grouped choices from the stored metadata.
+
+The first presenter load may briefly render deterministic fallback groups before refreshed aggregation results are written. Once saved, later presenter visits should use the stored clusters immediately.
 
 ## UI Requirements
 
@@ -273,6 +303,8 @@ Unit tests:
 - Decision point de-duplication and merge behavior.
 - Annotation locking rules.
 - Presentation grouping logic.
+- Aggregation result parsing and annotation metadata persistence.
+- Fallback grouping when aggregation is missing or fails.
 
 Integration tests:
 
@@ -281,7 +313,7 @@ Integration tests:
 - Committing an annotation and locking play details.
 - Requiring a verdict at the next pause before another annotation.
 - Creating community checkpoints from annotations.
-- Aggregating anonymous presentation choices.
+- Aggregating anonymous presentation choices across the full session on presenter load.
 - Revealing reviewer identity in presentation mode.
 
 ## Future Extensions
@@ -291,6 +323,6 @@ Integration tests:
 - Supabase Storage or Vercel Blob for uploaded videos and screenshots.
 - Parsed decklist views.
 - Dynamic and time-ranged hand-hidden-block overlays.
-- AI normalization of free-text action details into comparable play labels.
+- Manual presenter refresh and review of aggregated play labels.
 - Presenter-curated required checkpoints.
 - Comment threads on decision points.
