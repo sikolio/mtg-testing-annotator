@@ -11,11 +11,18 @@ describe("buildCreateSessionPayload", () => {
       handBlockX: 0,
       handBlockY: 0,
       handBlockWidth: 0,
-      handBlockHeight: 0
+      handBlockHeight: 0,
+      handBlock2Enabled: true,
+      handBlock2X: 10,
+      handBlock2Y: 20,
+      handBlock2Width: 30,
+      handBlock2Height: 40
     });
 
     expect(payload.presenterEmail).toBe("player@one.com");
     expect(payload.youtubeVideoId).toBe("LBkEDKfWpaA");
+    expect(payload.handBlock2Enabled).toBe(true);
+    expect(payload.handBlock2Width).toBe(30);
   });
 
   it("rejects an empty decklist", () => {

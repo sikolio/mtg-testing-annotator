@@ -30,7 +30,7 @@ export type ReviewSession = {
   youtubeUrl: string;
   youtubeVideoId: string;
   decklistText: string;
-  handBlock: HandBlock;
+  handBlocks: HandBlock[];
 };
 
 export type DecisionPoint = {

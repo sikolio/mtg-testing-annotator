@@ -23,6 +23,11 @@ create table public.review_sessions (
   hand_block_y numeric(5,2) not null default 0,
   hand_block_width numeric(5,2) not null default 0,
   hand_block_height numeric(5,2) not null default 0,
+  hand_block_2_enabled boolean not null default false,
+  hand_block_2_x numeric(5,2) not null default 0,
+  hand_block_2_y numeric(5,2) not null default 0,
+  hand_block_2_width numeric(5,2) not null default 0,
+  hand_block_2_height numeric(5,2) not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

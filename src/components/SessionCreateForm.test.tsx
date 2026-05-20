@@ -16,11 +16,17 @@ describe("SessionCreateForm", () => {
 
     await user.click(screen.getByLabelText("Enable static hand-hidden-block"));
 
-    expect(screen.getByTitle("Hand-hidden-block positioning preview")).toBeInTheDocument();
+    const preview = screen.getByTitle("Hand-hidden-block positioning preview");
+    expect(preview).toBeInTheDocument();
+    expect(preview).toHaveAttribute("src", expect.stringContaining("controls=1"));
     expect(screen.getByLabelText("Block x percent")).toHaveValue(3);
     expect(screen.getByLabelText("Block y percent")).toHaveValue(70);
     expect(screen.getByLabelText("Block width percent")).toHaveValue(94);
     expect(screen.getByLabelText("Block height percent")).toHaveValue(30);
+    expect(screen.getByLabelText("Enable second hand-hidden-block")).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Enable second hand-hidden-block"));
+    expect(screen.getByLabelText("Second preview hidden hand information")).toBeInTheDocument();
 
     const xInput = screen.getByLabelText("Block x percent");
     await user.clear(xInput);

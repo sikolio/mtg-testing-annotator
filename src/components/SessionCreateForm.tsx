@@ -21,6 +21,11 @@ export function SessionCreateForm() {
   const [handBlockY, setHandBlockY] = useState("70");
   const [handBlockWidth, setHandBlockWidth] = useState("94");
   const [handBlockHeight, setHandBlockHeight] = useState("30");
+  const [handBlock2Enabled, setHandBlock2Enabled] = useState(false);
+  const [handBlock2X, setHandBlock2X] = useState("52");
+  const [handBlock2Y, setHandBlock2Y] = useState("70");
+  const [handBlock2Width, setHandBlock2Width] = useState("45");
+  const [handBlock2Height, setHandBlock2Height] = useState("30");
 
   let previewVideoId: string | null = null;
   try {
@@ -41,7 +46,12 @@ export function SessionCreateForm() {
           handBlockX: Number(handBlockX || 0),
           handBlockY: Number(handBlockY || 0),
           handBlockWidth: Number(handBlockWidth || 0),
-          handBlockHeight: Number(handBlockHeight || 0)
+          handBlockHeight: Number(handBlockHeight || 0),
+          handBlock2Enabled,
+          handBlock2X: Number(handBlock2X || 0),
+          handBlock2Y: Number(handBlock2Y || 0),
+          handBlock2Width: Number(handBlock2Width || 0),
+          handBlock2Height: Number(handBlock2Height || 0)
         });
         setLinks(result);
       } catch (caught) {
@@ -80,10 +90,10 @@ export function SessionCreateForm() {
         <div className="block-settings">
           {previewVideoId ? (
             <div className="video-frame block-preview">
-              <img
+              <iframe
                 title="Hand-hidden-block positioning preview"
-                src={`https://i.ytimg.com/vi/${previewVideoId}/hqdefault.jpg`}
-                alt=""
+                src={`https://www.youtube.com/embed/${previewVideoId}?enablejsapi=1&rel=0&controls=1`}
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               />
               <div
                 className="hand-block"
@@ -95,10 +105,31 @@ export function SessionCreateForm() {
                 }}
                 aria-label="Preview hidden hand information"
               />
+              {handBlock2Enabled ? (
+                <div
+                  className="hand-block"
+                  style={{
+                    left: `${Number(handBlock2X || 0)}%`,
+                    top: `${Number(handBlock2Y || 0)}%`,
+                    width: `${Number(handBlock2Width || 0)}%`,
+                    height: `${Number(handBlock2Height || 0)}%`
+                  }}
+                  aria-label="Second preview hidden hand information"
+                />
+              ) : null}
             </div>
           ) : (
             <p className="error-text">Enter a valid YouTube URL to preview the block.</p>
           )}
+
+          <label className="inline-check">
+            <input
+              type="checkbox"
+              checked={handBlock2Enabled}
+              onChange={(event) => setHandBlock2Enabled(event.target.checked)}
+            />
+            Enable second hand-hidden-block
+          </label>
 
           <div className="block-grid">
             <input
@@ -138,6 +169,47 @@ export function SessionCreateForm() {
               aria-label="Block height percent"
             />
           </div>
+
+          {handBlock2Enabled ? (
+            <div className="block-grid">
+              <input
+                name="handBlock2X"
+                type="number"
+                min="0"
+                max="100"
+                value={handBlock2X}
+                onChange={(event) => setHandBlock2X(event.target.value)}
+                aria-label="Second block x percent"
+              />
+              <input
+                name="handBlock2Y"
+                type="number"
+                min="0"
+                max="100"
+                value={handBlock2Y}
+                onChange={(event) => setHandBlock2Y(event.target.value)}
+                aria-label="Second block y percent"
+              />
+              <input
+                name="handBlock2Width"
+                type="number"
+                min="0"
+                max="100"
+                value={handBlock2Width}
+                onChange={(event) => setHandBlock2Width(event.target.value)}
+                aria-label="Second block width percent"
+              />
+              <input
+                name="handBlock2Height"
+                type="number"
+                min="0"
+                max="100"
+                value={handBlock2Height}
+                onChange={(event) => setHandBlock2Height(event.target.value)}
+                aria-label="Second block height percent"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 

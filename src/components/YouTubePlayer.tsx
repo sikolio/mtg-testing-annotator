@@ -5,11 +5,11 @@ import type { HandBlock } from "@/lib/types";
 
 export function YouTubePlayer({
   videoId,
-  handBlock,
+  handBlocks,
   title = "Review video"
 }: {
   videoId: string;
-  handBlock: HandBlock;
+  handBlocks: HandBlock[];
   title?: string;
 }) {
   return (
@@ -20,7 +20,7 @@ export function YouTubePlayer({
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
       />
-      <HandBlockOverlay block={handBlock} />
+      <HandBlockOverlay blocks={handBlocks} />
     </div>
   );
 }

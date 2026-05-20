@@ -47,7 +47,12 @@ export async function createReviewSession(input: CreateSessionInput) {
       hand_block_x: payload.handBlockX,
       hand_block_y: payload.handBlockY,
       hand_block_width: payload.handBlockWidth,
-      hand_block_height: payload.handBlockHeight
+      hand_block_height: payload.handBlockHeight,
+      hand_block_2_enabled: payload.handBlock2Enabled,
+      hand_block_2_x: payload.handBlock2X,
+      hand_block_2_y: payload.handBlock2Y,
+      hand_block_2_width: payload.handBlock2Width,
+      hand_block_2_height: payload.handBlock2Height
     })
     .select("id,share_slug,presenter_slug")
     .single();

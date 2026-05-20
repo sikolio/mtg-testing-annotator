@@ -1,20 +1,27 @@
 import type { HandBlock } from "@/lib/types";
 
-export function HandBlockOverlay({ block }: { block: HandBlock }) {
-  if (!block.enabled) {
+export function HandBlockOverlay({ blocks }: { blocks: HandBlock[] }) {
+  const enabledBlocks = blocks.filter((block) => block.enabled);
+
+  if (enabledBlocks.length === 0) {
     return null;
   }
 
   return (
-    <div
-      className="hand-block"
-      style={{
-        left: `${block.x}%`,
-        top: `${block.y}%`,
-        width: `${block.width}%`,
-        height: `${block.height}%`
-      }}
-      aria-label="Hidden hand information"
-    />
+    <>
+      {enabledBlocks.map((block, index) => (
+        <div
+          key={`${block.x}-${block.y}-${block.width}-${block.height}-${index}`}
+          className="hand-block"
+          style={{
+            left: `${block.x}%`,
+            top: `${block.y}%`,
+            width: `${block.width}%`,
+            height: `${block.height}%`
+          }}
+          aria-label={index === 0 ? "Hidden hand information" : `Hidden hand information ${index + 1}`}
+        />
+      ))}
+    </>
   );
 }

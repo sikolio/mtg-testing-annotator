@@ -9,7 +9,12 @@ const createSessionSchema = z.object({
   handBlockX: z.coerce.number().min(0).max(100),
   handBlockY: z.coerce.number().min(0).max(100),
   handBlockWidth: z.coerce.number().min(0).max(100),
-  handBlockHeight: z.coerce.number().min(0).max(100)
+  handBlockHeight: z.coerce.number().min(0).max(100),
+  handBlock2Enabled: z.boolean().default(false),
+  handBlock2X: z.coerce.number().min(0).max(100).default(52),
+  handBlock2Y: z.coerce.number().min(0).max(100).default(70),
+  handBlock2Width: z.coerce.number().min(0).max(100).default(45),
+  handBlock2Height: z.coerce.number().min(0).max(100).default(30)
 });
 
 export type CreateSessionInput = z.input<typeof createSessionSchema>;

@@ -23,6 +23,11 @@ type LocalSession = {
   hand_block_y: number;
   hand_block_width: number;
   hand_block_height: number;
+  hand_block_2_enabled: boolean;
+  hand_block_2_x: number;
+  hand_block_2_y: number;
+  hand_block_2_width: number;
+  hand_block_2_height: number;
 };
 
 type LocalDecisionPoint = {
@@ -82,6 +87,11 @@ type CreateLocalPayload = {
   handBlockY: number;
   handBlockWidth: number;
   handBlockHeight: number;
+  handBlock2Enabled: boolean;
+  handBlock2X: number;
+  handBlock2Y: number;
+  handBlock2Width: number;
+  handBlock2Height: number;
 };
 
 const emptyDb = (): LocalDb => ({
@@ -160,7 +170,12 @@ export async function createLocalReviewSession({
     hand_block_x: payload.handBlockX,
     hand_block_y: payload.handBlockY,
     hand_block_width: payload.handBlockWidth,
-    hand_block_height: payload.handBlockHeight
+    hand_block_height: payload.handBlockHeight,
+    hand_block_2_enabled: payload.handBlock2Enabled,
+    hand_block_2_x: payload.handBlock2X,
+    hand_block_2_y: payload.handBlock2Y,
+    hand_block_2_width: payload.handBlock2Width,
+    hand_block_2_height: payload.handBlock2Height
   };
 
   db.review_sessions.push(session);

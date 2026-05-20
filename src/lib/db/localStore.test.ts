@@ -30,7 +30,12 @@ describe("localStore", () => {
         handBlockX: 3,
         handBlockY: 70,
         handBlockWidth: 94,
-        handBlockHeight: 30
+        handBlockHeight: 30,
+        handBlock2Enabled: true,
+        handBlock2X: 52,
+        handBlock2Y: 70,
+        handBlock2Width: 45,
+        handBlock2Height: 30
       },
       createSlug: () => randomUUID().replaceAll("-", "").slice(0, 16)
     });
@@ -44,5 +49,7 @@ describe("localStore", () => {
     expect(reviewerSession?.session.decklist_text).toBe("4 Lightning Bolt");
     expect(reviewerSession?.user?.email).toBe("reviewer@example.com");
     expect(presenterSession?.session.hand_block_width).toBe(94);
+    expect(presenterSession?.session.hand_block_2_enabled).toBe(true);
+    expect(presenterSession?.session.hand_block_2_width).toBe(45);
   });
 });

@@ -38,13 +38,22 @@ export default async function ReviewerPage({
           id: local.session.id,
           youtubeVideoId: local.session.youtube_video_id,
           decklistText: local.session.decklist_text,
-          handBlock: {
-            enabled: local.session.hand_block_enabled,
-            x: Number(local.session.hand_block_x),
-            y: Number(local.session.hand_block_y),
-            width: Number(local.session.hand_block_width),
-            height: Number(local.session.hand_block_height)
-          }
+          handBlocks: [
+            {
+              enabled: local.session.hand_block_enabled,
+              x: Number(local.session.hand_block_x),
+              y: Number(local.session.hand_block_y),
+              width: Number(local.session.hand_block_width),
+              height: Number(local.session.hand_block_height)
+            },
+            {
+              enabled: local.session.hand_block_2_enabled,
+              x: Number(local.session.hand_block_2_x),
+              y: Number(local.session.hand_block_2_y),
+              width: Number(local.session.hand_block_2_width),
+              height: Number(local.session.hand_block_2_height)
+            }
+          ]
         }}
         user={local.user}
         decisionPoints={local.decisionPoints.map((point) => ({
@@ -106,13 +115,22 @@ export default async function ReviewerPage({
         id: session.id,
         youtubeVideoId: session.youtube_video_id,
         decklistText: session.decklist_text,
-        handBlock: {
-          enabled: session.hand_block_enabled,
-          x: Number(session.hand_block_x),
-          y: Number(session.hand_block_y),
-          width: Number(session.hand_block_width),
-          height: Number(session.hand_block_height)
-        }
+        handBlocks: [
+          {
+            enabled: session.hand_block_enabled,
+            x: Number(session.hand_block_x),
+            y: Number(session.hand_block_y),
+            width: Number(session.hand_block_width),
+            height: Number(session.hand_block_height)
+          },
+          {
+            enabled: session.hand_block_2_enabled,
+            x: Number(session.hand_block_2_x),
+            y: Number(session.hand_block_2_y),
+            width: Number(session.hand_block_2_width),
+            height: Number(session.hand_block_2_height)
+          }
+        ]
       }}
       user={user}
       decisionPoints={(decisionPoints ?? []).map((point) => ({

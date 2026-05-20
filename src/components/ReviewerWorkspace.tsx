@@ -11,7 +11,7 @@ type ReviewerWorkspaceProps = {
     id: string;
     youtubeVideoId: string;
     decklistText: string;
-    handBlock: HandBlock;
+    handBlocks: HandBlock[];
   };
   user: {
     id: string;
@@ -80,7 +80,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   return (
     <main className="workspace">
       <section className="review-main">
-        <YouTubePlayer videoId={session.youtubeVideoId} handBlock={session.handBlock} />
+        <YouTubePlayer videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
         <div className="panel timeline-panel">
           <button type="button" onClick={() => setTimestampSeconds((value) => Number((value + 5).toFixed(2)))}>
             Add annotation

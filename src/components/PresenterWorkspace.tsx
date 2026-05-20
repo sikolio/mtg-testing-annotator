@@ -10,7 +10,7 @@ type PresenterWorkspaceProps = {
   session: {
     youtubeVideoId: string;
     decklistText: string;
-    handBlock: HandBlock;
+    handBlocks: HandBlock[];
   };
   decisionPoints: DecisionPoint[];
   annotations: Annotation[];
@@ -27,7 +27,7 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
   return (
     <main className="workspace">
       <section className="review-main">
-        <YouTubePlayer videoId={session.youtubeVideoId} handBlock={session.handBlock} title="Presentation video" />
+        <YouTubePlayer videoId={session.youtubeVideoId} handBlocks={session.handBlocks} title="Presentation video" />
         <div className="panel">
           <h2>Decision points</h2>
           <div className="decision-rail">
