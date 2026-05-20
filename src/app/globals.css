@@ -139,13 +139,14 @@ button:disabled {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
   gap: 16px;
   width: min(1440px, calc(100vw - 24px));
   margin: 0 auto;
   padding: 16px 0;
 }
 
+.review-left,
 .review-main,
 .review-side {
   display: grid;
@@ -244,6 +245,18 @@ button:disabled {
 @media (max-width: 920px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .review-left {
+    order: 2;
+  }
+
+  .review-main {
+    order: 1;
+  }
+
+  .review-side {
+    order: 3;
   }
 
   .timeline-panel {

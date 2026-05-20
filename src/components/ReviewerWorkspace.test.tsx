@@ -50,6 +50,15 @@ afterEach(() => {
 });
 
 describe("ReviewerWorkspace", () => {
+  it("shows opponent decklist on its own panel alongside the player's decklist", () => {
+    render(<ReviewerWorkspace session={session} user={user} decisionPoints={[]} />);
+
+    expect(screen.getByRole("heading", { name: "Opponent decklist" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your decklist" })).toBeInTheDocument();
+    expect(screen.getByText("4 Thoughtseize")).toBeInTheDocument();
+    expect(screen.getByText("4 Lightning Bolt")).toBeInTheDocument();
+  });
+
   it("pauses the video and copies the exact current player timestamp into the annotation field", async () => {
     const userEventApi = userEvent.setup();
 

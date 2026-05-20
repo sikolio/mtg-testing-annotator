@@ -102,6 +102,14 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
 
   return (
     <main className="workspace">
+      <aside className="review-left">
+        <DecklistPanel
+          title="Opponent decklist"
+          decklistText={session.opponentDecklistText}
+          emptyMessage="No opponent decklist provided yet."
+        />
+      </aside>
+
       <section className="review-main">
         <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
         <div className="panel timeline-panel">
@@ -133,8 +141,8 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
 
       <section className="review-side">
         <DecklistPanel
+          title="Your decklist"
           decklistText={session.decklistText}
-          opponentDecklistText={session.opponentDecklistText}
         />
 
         <div className="panel">

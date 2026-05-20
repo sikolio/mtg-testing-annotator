@@ -27,6 +27,14 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
 
   return (
     <main className="workspace">
+      <aside className="review-left">
+        <DecklistPanel
+          title="Opponent decklist"
+          decklistText={session.opponentDecklistText}
+          emptyMessage="No opponent decklist provided yet."
+        />
+      </aside>
+
       <section className="review-main">
         <YouTubePlayer videoId={session.youtubeVideoId} handBlocks={session.handBlocks} title="Presentation video" />
         <div className="panel">
@@ -48,8 +56,8 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
 
       <section className="review-side">
         <DecklistPanel
+          title="Your decklist"
           decklistText={session.decklistText}
-          opponentDecklistText={session.opponentDecklistText}
         />
         <div className="panel">
           <div className="presentation-header">
