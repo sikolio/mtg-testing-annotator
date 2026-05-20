@@ -24,16 +24,34 @@ const user = {
 };
 
 const { playerFactory, playerState } = vi.hoisted(() => {
+  let stateChangeListener: ((event: { data: number }) => void) | null = null;
   const state = {
+    cueVideoById: vi.fn(() => Promise.resolve()),
     destroy: vi.fn(),
     getCurrentTime: vi.fn(() => Promise.resolve(42.37)),
+    off: vi.fn((listener: (event: { data: number }) => void) => {
+      if (stateChangeListener === listener) {
+        stateChangeListener = null;
+      }
+    }),
+    on: vi.fn((eventName: string, listener: (event: { data: number }) => void) => {
+      if (eventName === "stateChange") {
+        stateChangeListener = listener;
+      }
+    }),
     pauseVideo: vi.fn(() => Promise.resolve()),
+    playVideo: vi.fn(() => Promise.resolve()),
     seekTo: vi.fn(() => Promise.resolve())
   };
 
   return {
     playerFactory: vi.fn(() => state),
-    playerState: state
+    playerState: {
+      ...state,
+      emitStateChange(data: number) {
+        stateChangeListener?.({ data });
+      }
+    }
   };
 });
 
@@ -43,8 +61,12 @@ vi.mock("youtube-player", () => ({
 
 afterEach(() => {
   playerState.destroy.mockClear();
+  playerState.cueVideoById.mockClear();
   playerState.getCurrentTime.mockClear();
+  playerState.off.mockClear();
+  playerState.on.mockClear();
   playerState.pauseVideo.mockClear();
+  playerState.playVideo.mockClear();
   playerState.seekTo.mockClear();
   playerFactory.mockClear();
 });
@@ -90,7 +112,7 @@ describe("ReviewerWorkspace", () => {
     expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
   });
 
-  it("jumps to a decision point and pauses there when clicked", async () => {
+  it("cues a decision point before the first play so the video can still start normally", async () => {
     const userEventApi = userEvent.setup();
 
     render(
@@ -112,7 +134,8 @@ describe("ReviewerWorkspace", () => {
     await userEventApi.click(screen.getByRole("button", { name: "Jump to 10.00s" }));
 
     expect(screen.getByLabelText("Current timestamp")).toHaveValue(10);
-    expect(playerState.seekTo).toHaveBeenCalledWith(10, true);
-    expect(playerState.pauseVideo).toHaveBeenCalledTimes(2);
+    expect(playerState.cueVideoById).toHaveBeenCalledWith("LBkEDKfWpaA", 10);
+    expect(playerState.seekTo).not.toHaveBeenCalled();
+    expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
   });
 });
