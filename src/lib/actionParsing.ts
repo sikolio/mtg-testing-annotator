@@ -40,6 +40,7 @@ type ParseAnnotationActionInput = {
 
 export const ACTION_PARSE_VERSION = "v1";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const ACTION_VERB_PATTERN = /\b(fetch|cast|play|attack|block|activate|pass|hold up|bolt|kill|channel|cycle)\b/gi;
 
 export function inferActionTypeFromText(actionText: string): ActionType {
   const normalized = actionText.trim().toLowerCase();
@@ -87,6 +88,25 @@ function buildPrompt(input: ParseAnnotationActionInput) {
   });
 }
 
+function countActionVerbs(text: string) {
+  return [...text.toLowerCase().matchAll(ACTION_VERB_PATTERN)].length;
+}
+
+function droppedMaterialAction(rawActionText: string, parsedActionText: string) {
+  const rawVerbCount = countActionVerbs(rawActionText);
+  const parsedVerbCount = countActionVerbs(parsedActionText);
+
+  if (rawVerbCount >= 2 && parsedVerbCount < rawVerbCount) {
+    return true;
+  }
+
+  if (/\band\b/i.test(rawActionText) && !/\band\b/i.test(parsedActionText) && rawVerbCount > parsedVerbCount) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function parseAnnotationAction({
   rawActionText,
   argumentsText,
@@ -126,7 +146,15 @@ export async function parseAnnotationAction({
       }
     });
 
-    return response.output_parsed ?? fallback;
+    if (!response.output_parsed) {
+      return fallback;
+    }
+
+    if (droppedMaterialAction(rawActionText, response.output_parsed.parsedActionText)) {
+      return fallback;
+    }
+
+    return response.output_parsed;
   } catch {
     return fallback;
   }

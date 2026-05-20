@@ -47,8 +47,11 @@ type AggregateDecisionPointInput = {
   model?: string;
 };
 
-export const AGGREGATION_VERSION = "v2";
+export const AGGREGATION_VERSION = "v3";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const GENERIC_LABEL_PATTERN =
+  /\b(resource management|creature play|board development|color fixing|tempo play|mana fixing|line)\b/i;
+const ACTION_VERB_PATTERN = /\b(fetch|cast|play|attack|block|activate|pass|hold up|bolt|kill|channel|cycle)\b/gi;
 
 function buildDeterministicAssignments(annotations: Annotation[]): AggregationAssignment[] {
   return annotations.map((annotation) => ({
@@ -77,6 +80,27 @@ function buildPrompt(decisionPointId: string, annotations: Annotation[]) {
   });
 }
 
+function pickClusterLabel(label: string, clusterAnnotations: Annotation[]) {
+  const trimmedLabel = label.trim();
+
+  if (!trimmedLabel || GENERIC_LABEL_PATTERN.test(trimmedLabel)) {
+    return [...clusterAnnotations]
+      .sort((left, right) => {
+        const leftVerbCount = [...left.actionText.toLowerCase().matchAll(ACTION_VERB_PATTERN)].length;
+        const rightVerbCount = [...right.actionText.toLowerCase().matchAll(ACTION_VERB_PATTERN)].length;
+
+        return (
+          rightVerbCount - leftVerbCount ||
+          right.actionText.length - left.actionText.length ||
+          left.actionText.localeCompare(right.actionText)
+        );
+      })[0]
+      ?.actionText ?? "Grouped play";
+  }
+
+  return trimmedLabel;
+}
+
 function coerceAssignments(
   annotations: Annotation[],
   parsed: z.infer<typeof aggregationResponseSchema> | null | undefined
@@ -90,6 +114,9 @@ function coerceAssignments(
   const seen = new Set<string>();
 
   for (const cluster of parsed.clusters) {
+    const clusterAnnotations = annotations.filter((annotation) => cluster.annotationIds.includes(annotation.id));
+    const clusterLabel = pickClusterLabel(cluster.label, clusterAnnotations);
+
     for (const annotationId of cluster.annotationIds) {
       if (!annotationIds.has(annotationId) || seen.has(annotationId)) {
         continue;
@@ -99,7 +126,7 @@ function coerceAssignments(
       assignments.push({
         annotationId,
         clusterId: cluster.id,
-        label: cluster.label.trim() || "Grouped play"
+        label: clusterLabel
       });
     }
   }
@@ -132,7 +159,7 @@ export async function aggregateDecisionPointAnnotations({
         {
           role: "system",
           content:
-            "Group equivalent Magic: The Gathering play suggestions for one decision point. Return clusters that preserve distinct strategic options. Use the confirmed parsed action wording when possible. Output JSON only."
+            "Group equivalent Magic: The Gathering play suggestions for one decision point. Cluster lines together when they describe the same intended play, even if one is shorthand, omits verbs, or uses a fetch land name instead of the fetched land. Use MTG knowledge and the reasoning text. Prefer concrete labels that preserve all key actions in order and avoid vague labels like resource management or color fixing. Output JSON only."
         },
         {
           role: "user",
