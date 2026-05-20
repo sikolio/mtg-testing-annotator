@@ -47,18 +47,14 @@ type AggregateDecisionPointInput = {
   model?: string;
 };
 
-export const AGGREGATION_VERSION = "v1";
+export const AGGREGATION_VERSION = "v2";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
-
-function formatActionType(actionType: Annotation["actionType"]) {
-  return actionType.replaceAll("_", " ");
-}
 
 function buildDeterministicAssignments(annotations: Annotation[]): AggregationAssignment[] {
   return annotations.map((annotation) => ({
     annotationId: annotation.id,
-    clusterId: `fallback-${annotation.actionType}`,
-    label: formatActionType(annotation.actionType)
+    clusterId: `fallback-${annotation.actionText.trim().toLowerCase()}`,
+    label: annotation.actionText
   }));
 }
 
@@ -75,7 +71,6 @@ function buildPrompt(decisionPointId: string, annotations: Annotation[]) {
     decisionPointId,
     annotations: annotations.map((annotation) => ({
       id: annotation.id,
-      actionType: annotation.actionType,
       actionText: annotation.actionText,
       argumentsText: annotation.argumentsText
     }))
@@ -137,7 +132,7 @@ export async function aggregateDecisionPointAnnotations({
         {
           role: "system",
           content:
-            "Group equivalent Magic: The Gathering play suggestions for one decision point. Return clusters that preserve distinct strategic options. Do not rewrite reviewer text. Output JSON only."
+            "Group equivalent Magic: The Gathering play suggestions for one decision point. Return clusters that preserve distinct strategic options. Use the confirmed parsed action wording when possible. Output JSON only."
         },
         {
           role: "user",

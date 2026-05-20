@@ -5,10 +5,10 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { DecklistPanel } from "@/components/DecklistPanel";
 import { PlayTextComposer } from "@/components/PlayTextComposer";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
-import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
+import { confirmAnnotation, draftAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
 import { parseDecklistCardNames } from "@/lib/domain/decklist";
 import { useCardImageUrls } from "@/lib/useCardImageUrls";
-import { ACTION_TYPES, type ActionType, type Annotation, type DecisionPoint, type HandBlock } from "@/lib/types";
+import { type Annotation, type DecisionPoint, type HandBlock } from "@/lib/types";
 
 type ReviewerWorkspaceProps = {
   session: {
@@ -37,6 +37,8 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [actionText, setActionText] = useState("");
+  const [argumentsText, setArgumentsText] = useState("");
+  const [parsedActionText, setParsedActionText] = useState("");
   const [activeDecisionPointId, setActiveDecisionPointId] = useState(decisionPoints[0]?.id ?? "");
   const [isPending, startTransition] = useTransition();
   const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
@@ -50,34 +52,63 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   const activeDecisionPoint =
     activeDecisionPointIndex >= 0 ? sortedDecisionPoints[activeDecisionPointIndex] : sortedDecisionPoints[0] ?? null;
 
-  function handleAnnotation(formData: FormData) {
+  function handleDraftAnnotation() {
     setMessage(null);
     startTransition(async () => {
       try {
-        const saved = await commitAnnotation({
+        const saved = await draftAnnotation({
           sessionId: session.id,
           userId: user.id,
           timestampSeconds,
-          actionType: String(formData.get("actionType")) as ActionType,
-          actionText: String(formData.get("actionText") ?? ""),
-          argumentsText: String(formData.get("argumentsText") ?? "")
+          rawActionText: actionText,
+          argumentsText
         });
 
         setPendingAnnotation({
           id: saved.id,
           sessionId: session.id,
-          decisionPointId: saved.decision_point_id,
+          decisionPointId: saved.decisionPointId,
           userId: user.id,
           originalTimestampSeconds: timestampSeconds,
-          actionType: String(formData.get("actionType")) as ActionType,
-          actionText: String(formData.get("actionText") ?? ""),
-          argumentsText: String(formData.get("argumentsText") ?? ""),
-          lockedAt: saved.locked_at
+          rawActionText: saved.rawActionText,
+          actionType: saved.actionType,
+          actionText: saved.actionText,
+          argumentsText: saved.argumentsText,
+          lockedAt: saved.lockedAt
+        });
+        setParsedActionText(saved.actionText);
+        setMessage("Review the parsed interpretation, make any edits you want, and confirm it before continuing.");
+      } catch (caught) {
+        setMessage(caught instanceof Error ? caught.message : "Could not parse annotation.");
+      }
+    });
+  }
+
+  function handleConfirmAnnotation() {
+    if (!pendingAnnotation) {
+      return;
+    }
+
+    setMessage(null);
+    startTransition(async () => {
+      try {
+        const confirmed = await confirmAnnotation({
+          annotationId: pendingAnnotation.id,
+          actionText: parsedActionText
+        });
+
+        setPendingAnnotation({
+          ...pendingAnnotation,
+          actionType: confirmed.actionType,
+          actionText: confirmed.actionText,
+          lockedAt: confirmed.lockedAt
         });
         setActionText("");
+        setArgumentsText("");
+        setParsedActionText("");
         setMessage("Annotation locked. Continue the video, then record the verdict at the next pause.");
       } catch (caught) {
-        setMessage(caught instanceof Error ? caught.message : "Could not save annotation.");
+        setMessage(caught instanceof Error ? caught.message : "Could not confirm parsed play.");
       }
     });
   }
@@ -116,8 +147,10 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
     setActiveDecisionPointId(point.id);
     setTimestampSeconds(point.timestampSeconds);
     setMessage(
-      pendingAnnotation
+      pendingAnnotation?.lockedAt
         ? "Checkpoint loaded. Record the verdict for your previous play."
+        : pendingAnnotation
+          ? "Checkpoint loaded. Confirm your parsed play before continuing."
         : "Checkpoint loaded. Add your annotation for this decision."
     );
   }
@@ -227,10 +260,10 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
         />
 
         <div className="panel">
-          <h2>{pendingAnnotation ? "Video verdict" : "Your play"}</h2>
+          <h2>{pendingAnnotation?.lockedAt ? "Video verdict" : pendingAnnotation ? "Confirm parsed play" : "Your play"}</h2>
           {message ? <p className="status-text">{message}</p> : null}
 
-          {pendingAnnotation ? (
+          {pendingAnnotation?.lockedAt ? (
             <form action={handleVerdict} className="form-grid">
               <select name="verdict" required>
                 <option value="same_play">Same play</option>
@@ -241,15 +274,31 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                 Save verdict
               </button>
             </form>
+          ) : pendingAnnotation ? (
+            <div className="form-grid">
+              <label>
+                Original input
+                <textarea value={pendingAnnotation.rawActionText} rows={3} readOnly />
+              </label>
+              <PlayTextComposer
+                name="parsedActionText"
+                value={parsedActionText}
+                onChange={setParsedActionText}
+                cardNames={deckCardSuggestions}
+                imageUrls={imageUrls}
+                placeholder="Confirm the parsed play"
+              />
+              <button type="button" disabled={isPending} onClick={handleConfirmAnnotation}>
+                Confirm play
+              </button>
+            </div>
           ) : (
-            <form action={handleAnnotation} className="form-grid">
-              <select name="actionType" required>
-                {ACTION_TYPES.map((actionType) => (
-                  <option key={actionType} value={actionType}>
-                    {actionType.replaceAll("_", " ")}
-                  </option>
-                ))}
-              </select>
+            <form
+              action={() => {
+                handleDraftAnnotation();
+              }}
+              className="form-grid"
+            >
               <PlayTextComposer
                 name="actionText"
                 value={actionText}
@@ -258,9 +307,16 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                 imageUrls={imageUrls}
                 placeholder="What play would you make?"
               />
-              <textarea name="argumentsText" required rows={5} placeholder="Why this play and not another?" />
+              <textarea
+                name="argumentsText"
+                required
+                rows={5}
+                value={argumentsText}
+                onChange={(event) => setArgumentsText(event.target.value)}
+                placeholder="Why this play and not another?"
+              />
               <button type="submit" disabled={isPending}>
-                Commit and continue
+                Parse play
               </button>
             </form>
           )}

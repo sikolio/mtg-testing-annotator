@@ -13,6 +13,7 @@ function mapPresenterAnnotation(annotation: {
   user_id: string;
   reviewer_email?: string;
   original_timestamp_seconds: number | string;
+  raw_action_text: string;
   action_type: ActionType;
   action_text: string;
   arguments_text: string;
@@ -20,7 +21,7 @@ function mapPresenterAnnotation(annotation: {
   aggregated_action_label?: string | null;
   aggregation_version?: string | null;
   aggregated_at?: string | null;
-  locked_at: string;
+  locked_at: string | null;
   verdict?: AnnotationVerdict;
 }): Annotation {
   return {
@@ -30,6 +31,7 @@ function mapPresenterAnnotation(annotation: {
     userId: annotation.user_id,
     reviewerEmail: annotation.reviewer_email,
     originalTimestampSeconds: Number(annotation.original_timestamp_seconds),
+    rawActionText: annotation.raw_action_text,
     actionType: annotation.action_type,
     actionText: annotation.action_text,
     argumentsText: annotation.arguments_text,
@@ -71,9 +73,10 @@ async function fetchPresenterAnnotations(
   const explicit = await supabase
     .from("annotations")
     .select(
-      "id,session_id,decision_point_id,user_id,original_timestamp_seconds,action_type,action_text,arguments_text,aggregation_cluster_id,aggregated_action_label,aggregation_version,aggregated_at,locked_at,users(email),annotation_verdicts(verdict)"
+      "id,session_id,decision_point_id,user_id,original_timestamp_seconds,raw_action_text,action_type,action_text,arguments_text,aggregation_cluster_id,aggregated_action_label,aggregation_version,aggregated_at,locked_at,users(email),annotation_verdicts(verdict)"
     )
-    .eq("session_id", sessionId);
+    .eq("session_id", sessionId)
+    .not("locked_at", "is", null);
 
   if (!explicit.error) {
     return explicit;
@@ -82,7 +85,8 @@ async function fetchPresenterAnnotations(
   const legacy = await supabase
     .from("annotations")
     .select("*, users(email), annotation_verdicts(verdict)")
-    .eq("session_id", sessionId);
+    .eq("session_id", sessionId)
+    .not("locked_at", "is", null);
 
   if (legacy.error) {
     throw new Error(legacy.error.message);

@@ -60,6 +60,7 @@ describe("PresenterPage", () => {
       decision_point_id: "checkpoint-1",
       user_id: "user-1",
       original_timestamp_seconds: 243.58,
+      raw_action_text: "Fetch steam vents",
       action_type: "play_land",
       action_text: "Fetch steam vents",
       arguments_text: "I want my colors",
@@ -96,10 +97,12 @@ describe("PresenterPage", () => {
       if (table === "annotations") {
         return {
           select: (query: string) => ({
-            eq: async () =>
-              query.startsWith("id,session_id")
-                ? { data: null, error: { message: "bad explicit select" } }
-                : { data: [annotationRow], error: null }
+            eq: () => ({
+              not: async () =>
+                query.startsWith("id,session_id")
+                  ? { data: null, error: { message: "bad explicit select" } }
+                  : { data: [annotationRow], error: null }
+            })
           })
         };
       }
@@ -140,6 +143,7 @@ describe("PresenterPage", () => {
       decision_point_id: "checkpoint-1",
       user_id: "user-1",
       original_timestamp_seconds: 243.58,
+      raw_action_text: "Fetch steam vents",
       action_type: "play_land",
       action_text: "Fetch steam vents",
       arguments_text: "I want my colors",
@@ -180,7 +184,9 @@ describe("PresenterPage", () => {
       if (table === "annotations") {
         return {
           select: () => ({
-            eq: async () => ({ data: [annotationRow], error: null })
+            eq: () => ({
+              not: async () => ({ data: [annotationRow], error: null })
+            })
           }),
           update: updateSpy
         };

@@ -8,6 +8,7 @@ const baseAnnotation: Annotation = {
   decisionPointId: "dp-1",
   userId: "u-1",
   originalTimestampSeconds: 10,
+  rawActionText: "Cast Lightning Bolt",
   actionType: "cast_spell",
   actionText: "Cast Lightning Bolt",
   argumentsText: "Remove the threat before combat.",

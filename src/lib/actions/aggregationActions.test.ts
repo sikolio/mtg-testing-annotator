@@ -10,6 +10,7 @@ function makeAnnotation(id: string, overrides: Partial<Annotation> = {}): Annota
     decisionPointId: "dp-1",
     userId: `user-${id}`,
     originalTimestampSeconds: 10,
+    rawActionText: "Bolt Ragavan",
     actionType: "cast_spell",
     actionText: "Bolt Ragavan",
     argumentsText: "Keep tempo.",

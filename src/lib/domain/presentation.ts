@@ -15,13 +15,13 @@ export function groupAnnotationsForPresentation(annotations: Annotation[]): Pres
   for (const annotation of annotations) {
     const key = annotation.aggregationClusterId
       ? `${annotation.decisionPointId}:cluster:${annotation.aggregationClusterId}`
-      : `${annotation.decisionPointId}:action:${annotation.actionType}`;
+      : `${annotation.decisionPointId}:action:${annotation.actionText.trim().toLowerCase()}`;
     const existing =
       groups.get(key) ??
       ({
         decisionPointId: annotation.decisionPointId,
         actionType: annotation.actionType,
-        label: annotation.aggregatedActionLabel ?? annotation.actionType.replaceAll("_", " "),
+        label: annotation.aggregatedActionLabel ?? annotation.actionText,
         count: 0,
         annotations: [],
         verdictCounts: {

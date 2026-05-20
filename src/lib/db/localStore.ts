@@ -44,6 +44,7 @@ type LocalAnnotation = {
   decision_point_id: string;
   user_id: string;
   original_timestamp_seconds: number;
+  raw_action_text: string;
   action_type: ActionType;
   action_text: string;
   arguments_text: string;
@@ -51,7 +52,7 @@ type LocalAnnotation = {
   aggregated_action_label?: string;
   aggregation_version?: string;
   aggregated_at?: string;
-  locked_at: string;
+  locked_at: string | null;
 };
 
 type LocalVerdict = {
@@ -237,6 +238,7 @@ export async function getLocalPresenterSession(presenterSlug: string) {
       .sort((a, b) => a.timestamp_seconds - b.timestamp_seconds),
     annotations: db.annotations
       .filter((annotation) => annotation.session_id === session.id)
+      .filter((annotation) => annotation.locked_at !== null)
       .map((annotation) => ({
         ...annotation,
         reviewer_email: userById.get(annotation.user_id)?.email,
@@ -284,9 +286,11 @@ export async function commitLocalAnnotation(input: {
   sessionId: string;
   userId: string;
   timestampSeconds: number;
+  rawActionText: string;
   actionType: ActionType;
   actionText: string;
   argumentsText: string;
+  lockedAt?: string | null;
 }) {
   const db = await readDb();
   const normalizedTimestamp = normalizeTimestampSeconds(input.timestampSeconds);
@@ -320,10 +324,11 @@ export async function commitLocalAnnotation(input: {
     decision_point_id: decisionPointId,
     user_id: input.userId,
     original_timestamp_seconds: normalizedTimestamp,
+    raw_action_text: input.rawActionText,
     action_type: input.actionType,
     action_text: input.actionText,
     arguments_text: input.argumentsText,
-    locked_at: new Date().toISOString()
+    locked_at: input.lockedAt ?? null
   };
 
   db.annotations.push(annotation);
@@ -332,8 +337,44 @@ export async function commitLocalAnnotation(input: {
   return {
     id: annotation.id,
     decision_point_id: annotation.decision_point_id,
+    raw_action_text: annotation.raw_action_text,
+    action_type: annotation.action_type,
+    action_text: annotation.action_text,
+    arguments_text: annotation.arguments_text,
     locked_at: annotation.locked_at
   };
+}
+
+export async function updateLocalAnnotation(input: {
+  annotationId: string;
+  actionType: ActionType;
+  actionText: string;
+  lockedAt: string | null;
+}) {
+  const db = await readDb();
+  db.annotations = db.annotations.map((annotation) =>
+    annotation.id === input.annotationId
+      ? {
+          ...annotation,
+          action_type: input.actionType,
+          action_text: input.actionText,
+          locked_at: input.lockedAt
+        }
+      : annotation
+  );
+  await writeDb(db);
+}
+
+export async function getLocalConfirmedActionTextsForDecisionPoint(input: {
+  sessionId: string;
+  decisionPointId: string;
+}) {
+  const db = await readDb();
+  return db.annotations
+    .filter((annotation) => annotation.session_id === input.sessionId)
+    .filter((annotation) => annotation.decision_point_id === input.decisionPointId)
+    .filter((annotation) => annotation.locked_at !== null)
+    .map((annotation) => annotation.action_text);
 }
 
 export async function submitLocalVerdict(input: { annotationId: string; verdict: AnnotationVerdict }) {

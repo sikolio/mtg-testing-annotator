@@ -9,6 +9,7 @@ function makeAnnotation(id: string, actionText: string): Annotation {
     decisionPointId: "dp-1",
     userId: `user-${id}`,
     originalTimestampSeconds: 10,
+    rawActionText: actionText,
     actionType: "cast_spell",
     actionText,
     argumentsText: "Keep tempo.",

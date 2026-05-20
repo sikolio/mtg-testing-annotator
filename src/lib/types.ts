@@ -48,6 +48,7 @@ export type Annotation = {
   userId: string;
   reviewerEmail?: string;
   originalTimestampSeconds: number;
+  rawActionText: string;
   actionType: ActionType;
   actionText: string;
   argumentsText: string;
@@ -55,6 +56,6 @@ export type Annotation = {
   aggregatedActionLabel?: string;
   aggregationVersion?: string;
   aggregatedAt?: string;
-  lockedAt: string;
+  lockedAt: string | null;
   verdict?: AnnotationVerdict;
 };
