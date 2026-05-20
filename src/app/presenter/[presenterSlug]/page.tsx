@@ -1,3 +1,4 @@
+import React from "react";
 import { notFound } from "next/navigation";
 import { PresenterWorkspace } from "@/components/PresenterWorkspace";
 import { ensureSessionAggregation } from "@/lib/actions/aggregationActions";
@@ -61,6 +62,33 @@ function getJoinedVerdict(
   }
 
   return verdicts?.verdict ?? undefined;
+}
+
+async function fetchPresenterAnnotations(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  sessionId: string
+) {
+  const explicit = await supabase
+    .from("annotations")
+    .select(
+      "id,session_id,decision_point_id,user_id,original_timestamp_seconds,action_type,action_text,arguments_text,aggregation_cluster_id,aggregated_action_label,aggregation_version,aggregated_at,locked_at,users(email),annotation_verdicts(verdict)"
+    )
+    .eq("session_id", sessionId);
+
+  if (!explicit.error) {
+    return explicit;
+  }
+
+  const legacy = await supabase
+    .from("annotations")
+    .select("*, users(email), annotation_verdicts(verdict)")
+    .eq("session_id", sessionId);
+
+  if (legacy.error) {
+    throw new Error(legacy.error.message);
+  }
+
+  return legacy;
 }
 
 export default async function PresenterPage({ params }: { params: Promise<{ presenterSlug: string }> }) {
@@ -147,19 +175,11 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
     notFound();
   }
 
-  const fetchAnnotations = async () =>
-    supabase
-      .from("annotations")
-      .select(
-        "id,session_id,decision_point_id,user_id,original_timestamp_seconds,action_type,action_text,arguments_text,aggregation_cluster_id,aggregated_action_label,aggregation_version,aggregated_at,locked_at,users(email),annotation_verdicts(verdict)"
-      )
-      .eq("session_id", session.id);
-
-  const initialAnnotationsResponse = await fetchAnnotations();
+  const initialAnnotationsResponse = await fetchPresenterAnnotations(supabase, session.id);
 
   await ensureSessionAggregation({
     sessionId: session.id,
-      annotations: (initialAnnotationsResponse.data ?? []).map((annotation) =>
+    annotations: (initialAnnotationsResponse.data ?? []).map((annotation) =>
       mapPresenterAnnotation({
         ...annotation,
         reviewer_email: getJoinedEmail(annotation.users),
@@ -194,7 +214,7 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
     .eq("session_id", session.id)
     .order("timestamp_seconds");
 
-  const { data: annotations } = await fetchAnnotations();
+  const { data: annotations } = await fetchPresenterAnnotations(supabase, session.id);
 
   return (
     <PresenterWorkspace
