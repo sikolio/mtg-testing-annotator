@@ -4,20 +4,14 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react
 import { HandBlockOverlay } from "@/components/HandBlockOverlay";
 import type { HandBlock } from "@/lib/types";
 
-const YOUTUBE_PLAYER_STATE_PLAYING = 1;
-
 type YouTubePlayerInstance = {
   destroy?: () => void;
   getCurrentTime: () => number;
   pauseVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
 };
 
 type YouTubePlayerReadyEvent = {
-  target: YouTubePlayerInstance;
-};
-
-type YouTubePlayerStateChangeEvent = {
-  data: number;
   target: YouTubePlayerInstance;
 };
 
@@ -26,7 +20,6 @@ type YouTubePlayerConstructor = new (
   options: {
     events?: {
       onReady?: (event: YouTubePlayerReadyEvent) => void;
-      onStateChange?: (event: YouTubePlayerStateChangeEvent) => void;
     };
     height?: string;
     playerVars?: Record<string, number | string>;
@@ -47,6 +40,7 @@ declare global {
 export type YouTubePlayerHandle = {
   getCurrentTime: () => Promise<number>;
   pause: () => Promise<void>;
+  seekTo: (seconds: number) => Promise<void>;
 };
 
 let youtubeIframeApiPromise: Promise<YouTubePlayerConstructor> | null = null;
@@ -85,19 +79,12 @@ export const YouTubePlayer = forwardRef<
   {
     videoId: string;
     handBlocks: HandBlock[];
-    onTimeChange?: (time: number) => void;
     title?: string;
   }
->(function YouTubePlayer({ videoId, handBlocks, onTimeChange, title = "Review video" }, ref) {
+>(function YouTubePlayer({ videoId, handBlocks, title = "Review video" }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const playerReadyPromiseRef = useRef<Promise<YouTubePlayerInstance> | null>(null);
-  const onTimeChangeRef = useRef(onTimeChange);
-  const pollingIntervalRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    onTimeChangeRef.current = onTimeChange;
-  }, [onTimeChange]);
 
   async function getReadyPlayer() {
     if (!playerReadyPromiseRef.current) {
@@ -105,20 +92,6 @@ export const YouTubePlayer = forwardRef<
     }
 
     return playerReadyPromiseRef.current;
-  }
-
-  function stopTimePolling() {
-    if (pollingIntervalRef.current !== null) {
-      window.clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  }
-
-  function startTimePolling(player: YouTubePlayerInstance) {
-    stopTimePolling();
-    pollingIntervalRef.current = window.setInterval(() => {
-      onTimeChangeRef.current?.(player.getCurrentTime());
-    }, 500);
   }
 
   useEffect(() => {
@@ -143,15 +116,8 @@ export const YouTubePlayer = forwardRef<
           events: {
             onReady: (event) => {
               playerRef.current = event.target;
+              event.target.pauseVideo();
               resolve(event.target);
-            },
-            onStateChange: (event) => {
-              if (event.data === YOUTUBE_PLAYER_STATE_PLAYING) {
-                startTimePolling(event.target);
-                return;
-              }
-
-              stopTimePolling();
             }
           }
         });
@@ -162,7 +128,6 @@ export const YouTubePlayer = forwardRef<
 
     return () => {
       cancelled = true;
-      stopTimePolling();
       playerRef.current?.destroy?.();
       playerRef.current = null;
       playerReadyPromiseRef.current = null;
@@ -177,6 +142,11 @@ export const YouTubePlayer = forwardRef<
     async getCurrentTime() {
       const player = await getReadyPlayer();
       return player.getCurrentTime();
+    },
+    async seekTo(seconds: number) {
+      const player = await getReadyPlayer();
+      player.seekTo(seconds, true);
+      player.pauseVideo();
     }
   }));
 

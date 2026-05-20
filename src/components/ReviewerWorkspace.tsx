@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { DecklistPanel } from "@/components/DecklistPanel";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
@@ -23,44 +23,11 @@ type ReviewerWorkspaceProps = {
 
 export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWorkspaceProps) {
   const playerRef = useRef<YouTubePlayerHandle | null>(null);
-  const handledCheckpointIdsRef = useRef<Set<string>>(new Set());
-  const decisionPointsRef = useRef(decisionPoints);
-  const pendingAnnotationRef = useRef<Annotation | null>(null);
   const [timestampSeconds, setTimestampSeconds] = useState(0);
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    handledCheckpointIdsRef.current = new Set();
-  }, [session.id]);
-
-  useEffect(() => {
-    decisionPointsRef.current = decisionPoints;
-  }, [decisionPoints]);
-
-  useEffect(() => {
-    pendingAnnotationRef.current = pendingAnnotation;
-  }, [pendingAnnotation]);
-
-  async function handlePlaybackTime(currentTime: number) {
-    const checkpoint = [...decisionPointsRef.current]
-      .sort((a, b) => a.timestampSeconds - b.timestampSeconds)
-      .find((point) => !handledCheckpointIdsRef.current.has(point.id) && currentTime >= point.timestampSeconds);
-
-    if (!checkpoint) {
-      return;
-    }
-
-    handledCheckpointIdsRef.current.add(checkpoint.id);
-    await playerRef.current?.pause();
-    setTimestampSeconds(checkpoint.timestampSeconds);
-    setMessage(
-      pendingAnnotationRef.current
-        ? "Checkpoint reached. Record the verdict for your previous play."
-        : "Checkpoint reached. Add your annotation for this decision."
-    );
-  }
+  const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
 
   function handleAnnotation(formData: FormData) {
     setMessage(null);
@@ -122,15 +89,20 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
     }
   }
 
+  async function handleDecisionPointJump(point: DecisionPoint) {
+    await playerRef.current?.seekTo(point.timestampSeconds);
+    setTimestampSeconds(point.timestampSeconds);
+    setMessage(
+      pendingAnnotation
+        ? "Checkpoint loaded. Record the verdict for your previous play."
+        : "Checkpoint loaded. Add your annotation for this decision."
+    );
+  }
+
   return (
     <main className="workspace">
       <section className="review-main">
-        <YouTubePlayer
-          ref={playerRef}
-          videoId={session.youtubeVideoId}
-          handBlocks={session.handBlocks}
-          onTimeChange={handlePlaybackTime}
-        />
+        <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
         <div className="panel timeline-panel">
           <button type="button" onClick={handleAddAnnotation}>
             Add annotation
@@ -146,6 +118,15 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
             />
           </label>
           <p>{decisionPoints.length} community checkpoints available.</p>
+          {sortedDecisionPoints.length > 0 ? (
+            <div className="checkpoint-list">
+              {sortedDecisionPoints.map((point) => (
+                <button key={point.id} type="button" onClick={() => handleDecisionPointJump(point)}>
+                  {`Jump to ${point.timestampSeconds.toFixed(2)}s`}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 

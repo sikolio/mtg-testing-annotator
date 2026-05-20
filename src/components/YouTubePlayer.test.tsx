@@ -6,7 +6,8 @@ import { YouTubePlayer, type YouTubePlayerHandle } from "./YouTubePlayer";
 
 const playerState = {
   getCurrentTime: vi.fn(() => 37.91),
-  pauseVideo: vi.fn()
+  pauseVideo: vi.fn(),
+  seekTo: vi.fn()
 };
 
 let latestPlayerEvents:
@@ -44,7 +45,7 @@ afterEach(() => {
 });
 
 describe("YouTubePlayer", () => {
-  it("uses the YouTube iframe API to pause and read the exact current time", async () => {
+  it("starts paused and can read the exact current time", async () => {
     (window as { YT?: unknown }).YT = { Player: playerConstructor };
     const ref = createRef<YouTubePlayerHandle>();
 
@@ -52,28 +53,22 @@ describe("YouTubePlayer", () => {
 
     await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
 
-    ref.current?.pause();
     await expect(ref.current?.getCurrentTime()).resolves.toBe(37.91);
 
     expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
     expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
   });
 
-  it("emits time updates while the video is playing", async () => {
+  it("seeks to a timestamp and pauses there", async () => {
     (window as { YT?: unknown }).YT = { Player: playerConstructor };
-    const onTimeChange = vi.fn();
+    const ref = createRef<YouTubePlayerHandle>();
 
-    render(<YouTubePlayer videoId="LBkEDKfWpaA" handBlocks={[]} onTimeChange={onTimeChange} />);
+    render(<YouTubePlayer ref={ref} videoId="LBkEDKfWpaA" handBlocks={[]} />);
 
     await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
-    vi.useFakeTimers();
+    await ref.current?.seekTo(15.25);
 
-    await act(async () => {
-      latestPlayerEvents?.onStateChange?.({ data: 1, target: playerState });
-      await vi.advanceTimersByTimeAsync(1200);
-    });
-
-    expect(onTimeChange).toHaveBeenCalled();
-    expect(onTimeChange).toHaveBeenLastCalledWith(37.91);
+    expect(playerState.seekTo).toHaveBeenCalledWith(15.25, true);
+    expect(playerState.pauseVideo).toHaveBeenCalledTimes(2);
   });
 });

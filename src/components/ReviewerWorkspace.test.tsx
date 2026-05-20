@@ -24,7 +24,8 @@ const user = {
 
 const playerState = {
   getCurrentTime: vi.fn(() => 42.37),
-  pauseVideo: vi.fn()
+  pauseVideo: vi.fn(),
+  seekTo: vi.fn()
 };
 
 let latestPlayerEvents:
@@ -71,15 +72,13 @@ describe("ReviewerWorkspace", () => {
     await userEventApi.click(screen.getByRole("button", { name: "Add annotation" }));
 
     await waitFor(() => expect(screen.getByLabelText("Current timestamp")).toHaveValue(42.37));
-    expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
+    expect(playerState.pauseVideo).toHaveBeenCalledTimes(2);
     expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
   });
 
-  it("autopauses when playback reaches a community checkpoint", async () => {
+  it("jumps to a decision point and pauses there when clicked", async () => {
     (window as { YT?: unknown }).YT = { Player: playerConstructor };
-    playerState.getCurrentTime
-      .mockReturnValueOnce(9.6)
-      .mockReturnValueOnce(10.2);
+    const userEventApi = userEvent.setup();
 
     render(
       <ReviewerWorkspace
@@ -97,15 +96,10 @@ describe("ReviewerWorkspace", () => {
     );
 
     await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
-    vi.useFakeTimers();
-
-    await act(async () => {
-      latestPlayerEvents?.onStateChange?.({ data: 1, target: playerState });
-      await vi.advanceTimersByTimeAsync(1600);
-    });
+    await userEventApi.click(screen.getByRole("button", { name: "Jump to 10.00s" }));
 
     expect(screen.getByLabelText("Current timestamp")).toHaveValue(10);
-    expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
-    expect(playerState.getCurrentTime.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(playerState.seekTo).toHaveBeenCalledWith(10, true);
+    expect(playerState.pauseVideo).toHaveBeenCalledTimes(2);
   });
 });
