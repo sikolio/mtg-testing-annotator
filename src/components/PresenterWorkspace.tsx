@@ -76,7 +76,12 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
       </aside>
 
       <section className="review-main">
-        <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} title="Presentation video" />
+        <YouTubePlayer
+          ref={playerRef}
+          videoId={session.youtubeVideoId}
+          handBlocks={session.handBlocks}
+          title="Presentation video"
+        />
         <div className="panel checkpoint-panel">
           <div className="checkpoint-summary">
             <h2>Decision points</h2>
@@ -123,11 +128,7 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
       </section>
 
       <section className="review-side">
-        <DecklistPanel
-          title="Your decklist"
-          decklistText={session.decklistText}
-          imageUrls={imageUrls}
-        />
+        <DecklistPanel title="Your decklist" decklistText={session.decklistText} imageUrls={imageUrls} />
         <div className="panel">
           <div className="presentation-header">
             <h2>{activePoint ? `Options at ${formatCheckpointTime(activePoint.timestampSeconds)}` : "No decisions yet"}</h2>
@@ -143,9 +144,9 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
 
           <div className="choice-groups">
             {groups.map((group) => (
-              <article key={`${group.decisionPointId}-${group.actionType}`} className="choice-group">
+              <article key={`${group.decisionPointId}-${group.actionType}-${group.label}`} className="choice-group">
                 <h3>
-                  {group.actionType.replaceAll("_", " ")} · {group.count}
+                  {group.label} · {group.count}
                 </h3>
                 <p>
                   Same {group.verdictCounts.same_play} · Different {group.verdictCounts.different_play} · Unclear{" "}
@@ -154,8 +155,12 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
                 {group.annotations.map((annotation, index) => (
                   <div key={annotation.id} className="annotation-card">
                     <strong>{showIdentities ? annotation.reviewerEmail : `Reviewer ${index + 1}`}</strong>
-                    <p><CardHoverText text={annotation.actionText} cardNames={cardNames} imageUrls={imageUrls} /></p>
-                    <p><CardHoverText text={annotation.argumentsText} cardNames={cardNames} imageUrls={imageUrls} /></p>
+                    <p>
+                      <CardHoverText text={annotation.actionText} cardNames={cardNames} imageUrls={imageUrls} />
+                    </p>
+                    <p>
+                      <CardHoverText text={annotation.argumentsText} cardNames={cardNames} imageUrls={imageUrls} />
+                    </p>
                   </div>
                 ))}
               </article>

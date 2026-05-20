@@ -131,4 +131,22 @@ describe("PresenterWorkspace", () => {
     expect(screen.getByText("Keep options open.")).toBeInTheDocument();
     expect(playerState.cueVideoById).toHaveBeenCalledWith("LBkEDKfWpaA", 258.77);
   });
+
+  it("shows the aggregated label for a grouped presenter choice", () => {
+    render(
+      <PresenterWorkspace
+        session={session}
+        decisionPoints={decisionPoints}
+        annotations={[
+          {
+            ...annotations[0],
+            aggregationClusterId: "cluster-1",
+            aggregatedActionLabel: "Kill Ragavan"
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: /Kill Ragavan · 1/i })).toBeInTheDocument();
+  });
 });

@@ -47,6 +47,10 @@ type LocalAnnotation = {
   action_type: ActionType;
   action_text: string;
   arguments_text: string;
+  aggregation_cluster_id?: string;
+  aggregated_action_label?: string;
+  aggregation_version?: string;
+  aggregated_at?: string;
   locked_at: string;
 };
 
@@ -239,6 +243,41 @@ export async function getLocalPresenterSession(presenterSlug: string) {
         verdict: verdictByAnnotation.get(annotation.id)
       }))
   };
+}
+
+export async function updateLocalAnnotationAggregations(input: {
+  decisionPointId: string;
+  assignments: Array<{
+    annotationId: string;
+    clusterId: string;
+    label: string;
+  }>;
+  aggregationVersion: string;
+  aggregatedAt: string;
+}) {
+  const db = await readDb();
+  const assignmentById = new Map(input.assignments.map((assignment) => [assignment.annotationId, assignment]));
+
+  db.annotations = db.annotations.map((annotation) => {
+    if (annotation.decision_point_id !== input.decisionPointId) {
+      return annotation;
+    }
+
+    const assignment = assignmentById.get(annotation.id);
+    if (!assignment) {
+      return annotation;
+    }
+
+    return {
+      ...annotation,
+      aggregation_cluster_id: assignment.clusterId,
+      aggregated_action_label: assignment.label,
+      aggregation_version: input.aggregationVersion,
+      aggregated_at: input.aggregatedAt
+    };
+  });
+
+  await writeDb(db);
 }
 
 export async function commitLocalAnnotation(input: {

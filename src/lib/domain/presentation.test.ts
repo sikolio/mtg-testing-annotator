@@ -47,4 +47,22 @@ describe("groupAnnotationsForPresentation", () => {
       unclear: 0
     });
   });
+
+  it("prefers stored aggregation clusters over action type grouping", () => {
+    const groups = groupAnnotationsForPresentation([
+      {
+        ...annotations[0],
+        aggregationClusterId: "cluster-1",
+        aggregatedActionLabel: "Kill Ragavan now"
+      },
+      {
+        ...annotations[1],
+        aggregationClusterId: "cluster-1",
+        aggregatedActionLabel: "Kill Ragavan now"
+      }
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBe("Kill Ragavan now");
+  });
 });

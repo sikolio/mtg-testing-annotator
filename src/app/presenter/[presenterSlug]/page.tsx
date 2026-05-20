@@ -1,14 +1,96 @@
 import { notFound } from "next/navigation";
 import { PresenterWorkspace } from "@/components/PresenterWorkspace";
-import { getLocalPresenterSession } from "@/lib/db/localStore";
+import { ensureSessionAggregation } from "@/lib/actions/aggregationActions";
+import { updateLocalAnnotationAggregations, getLocalPresenterSession } from "@/lib/db/localStore";
 import { createSupabaseServerClient, shouldUseLocalDevelopmentStore } from "@/lib/db/server";
-import type { ActionType, AnnotationVerdict } from "@/lib/types";
+import type { ActionType, Annotation, AnnotationVerdict } from "@/lib/types";
+
+function mapPresenterAnnotation(annotation: {
+  id: string;
+  session_id: string;
+  decision_point_id: string;
+  user_id: string;
+  reviewer_email?: string;
+  original_timestamp_seconds: number | string;
+  action_type: ActionType;
+  action_text: string;
+  arguments_text: string;
+  aggregation_cluster_id?: string | null;
+  aggregated_action_label?: string | null;
+  aggregation_version?: string | null;
+  aggregated_at?: string | null;
+  locked_at: string;
+  verdict?: AnnotationVerdict;
+}): Annotation {
+  return {
+    id: annotation.id,
+    sessionId: annotation.session_id,
+    decisionPointId: annotation.decision_point_id,
+    userId: annotation.user_id,
+    reviewerEmail: annotation.reviewer_email,
+    originalTimestampSeconds: Number(annotation.original_timestamp_seconds),
+    actionType: annotation.action_type,
+    actionText: annotation.action_text,
+    argumentsText: annotation.arguments_text,
+    aggregationClusterId: annotation.aggregation_cluster_id ?? undefined,
+    aggregatedActionLabel: annotation.aggregated_action_label ?? undefined,
+    aggregationVersion: annotation.aggregation_version ?? undefined,
+    aggregatedAt: annotation.aggregated_at ?? undefined,
+    lockedAt: annotation.locked_at,
+    verdict: annotation.verdict
+  };
+}
+
+function getJoinedEmail(users: { email: string | null } | Array<{ email: string | null }> | null | undefined) {
+  if (Array.isArray(users)) {
+    return users[0]?.email ?? undefined;
+  }
+
+  return users?.email ?? undefined;
+}
+
+function getJoinedVerdict(
+  verdicts:
+    | { verdict: AnnotationVerdict | null }
+    | Array<{ verdict: AnnotationVerdict | null }>
+    | null
+    | undefined
+) {
+  if (Array.isArray(verdicts)) {
+    return verdicts[0]?.verdict ?? undefined;
+  }
+
+  return verdicts?.verdict ?? undefined;
+}
 
 export default async function PresenterPage({ params }: { params: Promise<{ presenterSlug: string }> }) {
   const { presenterSlug } = await params;
 
   if (shouldUseLocalDevelopmentStore()) {
-    const local = await getLocalPresenterSession(presenterSlug);
+    let local = await getLocalPresenterSession(presenterSlug);
+
+    if (!local) {
+      notFound();
+    }
+
+    await ensureSessionAggregation({
+      sessionId: local.session.id,
+      annotations: local.annotations.map((annotation) =>
+        mapPresenterAnnotation({
+          ...annotation,
+          action_type: annotation.action_type as ActionType
+        })
+      ),
+      persistAssignments: async ({ decisionPointId, assignments, aggregationVersion, aggregatedAt }) =>
+        updateLocalAnnotationAggregations({
+          decisionPointId,
+          assignments,
+          aggregationVersion,
+          aggregatedAt
+        })
+    });
+
+    local = await getLocalPresenterSession(presenterSlug);
 
     if (!local) {
       notFound();
@@ -44,17 +126,10 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
           source: point.source
         }))}
         annotations={local.annotations.map((annotation) => ({
-          id: annotation.id,
-          sessionId: annotation.session_id,
-          decisionPointId: annotation.decision_point_id,
-          userId: annotation.user_id,
-          reviewerEmail: annotation.reviewer_email,
-          originalTimestampSeconds: Number(annotation.original_timestamp_seconds),
-          actionType: annotation.action_type,
-          actionText: annotation.action_text,
-          argumentsText: annotation.arguments_text,
-          lockedAt: annotation.locked_at,
-          verdict: annotation.verdict
+          ...mapPresenterAnnotation({
+            ...annotation,
+            action_type: annotation.action_type as ActionType
+          })
         }))}
       />
     );
@@ -72,16 +147,54 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
     notFound();
   }
 
+  const fetchAnnotations = async () =>
+    supabase
+      .from("annotations")
+      .select(
+        "id,session_id,decision_point_id,user_id,original_timestamp_seconds,action_type,action_text,arguments_text,aggregation_cluster_id,aggregated_action_label,aggregation_version,aggregated_at,locked_at,users(email),annotation_verdicts(verdict)"
+      )
+      .eq("session_id", session.id);
+
+  const initialAnnotationsResponse = await fetchAnnotations();
+
+  await ensureSessionAggregation({
+    sessionId: session.id,
+      annotations: (initialAnnotationsResponse.data ?? []).map((annotation) =>
+      mapPresenterAnnotation({
+        ...annotation,
+        reviewer_email: getJoinedEmail(annotation.users),
+        action_type: annotation.action_type as ActionType,
+        verdict: getJoinedVerdict(annotation.annotation_verdicts)
+      })
+    ),
+    persistAssignments: async ({ assignments, aggregationVersion, aggregatedAt }) => {
+      if (assignments.length === 0) {
+        return;
+      }
+
+      const { error } = await supabase.from("annotations").upsert(
+        assignments.map((assignment) => ({
+          id: assignment.annotationId,
+          aggregation_cluster_id: assignment.clusterId,
+          aggregated_action_label: assignment.label,
+          aggregation_version: aggregationVersion,
+          aggregated_at: aggregatedAt
+        }))
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+  });
+
   const { data: decisionPoints } = await supabase
     .from("decision_points")
     .select("id,session_id,timestamp_seconds,source")
     .eq("session_id", session.id)
     .order("timestamp_seconds");
 
-  const { data: annotations } = await supabase
-    .from("annotations")
-    .select("*, users(email), annotation_verdicts(verdict)")
-    .eq("session_id", session.id);
+  const { data: annotations } = await fetchAnnotations();
 
   return (
     <PresenterWorkspace
@@ -113,17 +226,12 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
         source: point.source
       }))}
       annotations={(annotations ?? []).map((annotation) => ({
-        id: annotation.id,
-        sessionId: annotation.session_id,
-        decisionPointId: annotation.decision_point_id,
-        userId: annotation.user_id,
-        reviewerEmail: annotation.users?.email,
-        originalTimestampSeconds: Number(annotation.original_timestamp_seconds),
-        actionType: annotation.action_type as ActionType,
-        actionText: annotation.action_text,
-        argumentsText: annotation.arguments_text,
-        lockedAt: annotation.locked_at,
-        verdict: annotation.annotation_verdicts?.verdict as AnnotationVerdict | undefined
+        ...mapPresenterAnnotation({
+          ...annotation,
+          reviewer_email: getJoinedEmail(annotation.users),
+          action_type: annotation.action_type as ActionType,
+          verdict: getJoinedVerdict(annotation.annotation_verdicts)
+        })
       }))}
     />
   );

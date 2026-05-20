@@ -12,6 +12,13 @@ A private-link review tool for Magic: The Gathering teams to annotate gameplay v
 
 2. Optional: create `.env.local` from `.env.example` and fill in Supabase values.
 
+   To enable presenter-side LLM aggregation, also set:
+
+   ```bash
+   OPENAI_API_KEY=your_server_side_key
+   OPENAI_MODEL=gpt-4o-mini
+   ```
+
 3. Optional: apply `supabase/migrations/0001_initial_schema.sql` to the Supabase project.
 
 4. Start the app:
@@ -31,3 +38,4 @@ If Supabase variables are missing, the app uses local development storage at `.d
 - Annotation play details lock when the reviewer commits and continues.
 - The reviewer records the same, different, or unclear verdict at the next pause.
 - Presenter mode groups choices anonymously by default and can reveal emails.
+- Presenter mode seeds whole-session action aggregation on load and stores the resulting cluster labels on annotations.

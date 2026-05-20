@@ -51,6 +51,10 @@ export type Annotation = {
   actionType: ActionType;
   actionText: string;
   argumentsText: string;
+  aggregationClusterId?: string;
+  aggregatedActionLabel?: string;
+  aggregationVersion?: string;
+  aggregatedAt?: string;
   lockedAt: string;
   verdict?: AnnotationVerdict;
 };

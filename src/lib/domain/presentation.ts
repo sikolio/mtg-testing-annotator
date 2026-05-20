@@ -3,6 +3,7 @@ import type { ActionType, Annotation, AnnotationVerdict } from "@/lib/types";
 export type PresentationGroup = {
   decisionPointId: string;
   actionType: ActionType;
+  label: string;
   count: number;
   annotations: Annotation[];
   verdictCounts: Record<AnnotationVerdict, number>;
@@ -12,12 +13,15 @@ export function groupAnnotationsForPresentation(annotations: Annotation[]): Pres
   const groups = new Map<string, PresentationGroup>();
 
   for (const annotation of annotations) {
-    const key = `${annotation.decisionPointId}:${annotation.actionType}`;
+    const key = annotation.aggregationClusterId
+      ? `${annotation.decisionPointId}:cluster:${annotation.aggregationClusterId}`
+      : `${annotation.decisionPointId}:action:${annotation.actionType}`;
     const existing =
       groups.get(key) ??
       ({
         decisionPointId: annotation.decisionPointId,
         actionType: annotation.actionType,
+        label: annotation.aggregatedActionLabel ?? annotation.actionType.replaceAll("_", " "),
         count: 0,
         annotations: [],
         verdictCounts: {
@@ -37,5 +41,5 @@ export function groupAnnotationsForPresentation(annotations: Annotation[]): Pres
     groups.set(key, existing);
   }
 
-  return [...groups.values()].sort((a, b) => b.count - a.count || a.actionType.localeCompare(b.actionType));
+  return [...groups.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
