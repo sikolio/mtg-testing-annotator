@@ -20,9 +20,9 @@ describe("SessionCreateForm", () => {
     expect(preview).toBeInTheDocument();
     expect(preview).toHaveAttribute("src", expect.stringContaining("controls=1"));
     expect(screen.getByLabelText("Block x percent")).toHaveValue(3);
-    expect(screen.getByLabelText("Block y percent")).toHaveValue(70);
+    expect(screen.getByLabelText("Block y percent")).toHaveValue(0);
     expect(screen.getByLabelText("Block width percent")).toHaveValue(94);
-    expect(screen.getByLabelText("Block height percent")).toHaveValue(30);
+    expect(screen.getByLabelText("Block height percent")).toHaveValue(8);
     expect(screen.getByLabelText("Enable second hand-hidden-block")).toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Enable second hand-hidden-block"));

@@ -80,7 +80,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   }
 
   async function handleAddAnnotation() {
-    playerRef.current?.pause();
+    await playerRef.current?.pause();
     const currentTime = await playerRef.current?.getCurrentTime();
 
     if (typeof currentTime === "number") {

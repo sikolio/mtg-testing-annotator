@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewerWorkspace } from "./ReviewerWorkspace";
 
 vi.mock("@/lib/actions/reviewActions", () => ({
@@ -22,36 +22,36 @@ const user = {
   email: "player@example.com"
 };
 
+const playerState = {
+  getCurrentTime: vi.fn(() => 42.37),
+  pauseVideo: vi.fn()
+};
+
+const playerConstructor = vi.fn((_element: HTMLElement, options: { events?: { onReady?: (event: unknown) => void } }) => {
+  options.events?.onReady?.({ target: playerState });
+  return playerState;
+});
+
+afterEach(() => {
+  playerState.getCurrentTime.mockClear();
+  playerState.pauseVideo.mockClear();
+  playerConstructor.mockClear();
+  delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).YT;
+  delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).onYouTubeIframeAPIReady;
+  document.head.innerHTML = "";
+});
+
 describe("ReviewerWorkspace", () => {
-  it("pauses the video and captures the current player timestamp when adding an annotation", async () => {
+  it("pauses the video and copies the exact current player timestamp into the annotation field", async () => {
+    (window as { YT?: unknown }).YT = { Player: playerConstructor };
     const userEventApi = userEvent.setup();
-    const postMessage = vi.fn();
-    vi.spyOn(HTMLIFrameElement.prototype, "contentWindow", "get").mockReturnValue({ postMessage } as unknown as Window);
 
     render(<ReviewerWorkspace session={session} user={user} decisionPoints={[]} />);
 
     await userEventApi.click(screen.getByRole("button", { name: "Add annotation" }));
 
-    expect(postMessage).toHaveBeenCalledWith(
-      JSON.stringify({ event: "command", func: "pauseVideo", args: [] }),
-      "*"
-    );
-    expect(postMessage).toHaveBeenCalledWith(
-      JSON.stringify({ event: "command", func: "getCurrentTime", args: [] }),
-      "*"
-    );
-
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: JSON.stringify({
-          event: "infoDelivery",
-          info: {
-            currentTime: 42.37
-          }
-        })
-      })
-    );
-
     await waitFor(() => expect(screen.getByLabelText("Current timestamp")).toHaveValue(42.37));
+    expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
+    expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
   });
 });
