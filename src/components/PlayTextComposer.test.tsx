@@ -49,4 +49,33 @@ describe("PlayTextComposer", () => {
 
     expect(screen.getByText("Lightning Bolt", { selector: "mark" })).toBeInTheDocument();
   });
+
+  it("suggests cards from shorthand references like single words and acronyms", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [value, setValue] = React.useState("");
+      return (
+        <PlayTextComposer
+          name="actionText"
+          value={value}
+          onChange={setValue}
+          cardNames={["Lightning Bolt", "Dragon's Rage Channeler", "Ragavan, Nimble Pilferer"]}
+          placeholder="What play would you make?"
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const textbox = screen.getByPlaceholderText("What play would you make?");
+    await user.type(textbox, "Bolt");
+
+    expect(screen.getByRole("button", { name: "Lightning Bolt" })).toBeInTheDocument();
+
+    await user.clear(textbox);
+    await user.type(textbox, "attack with drc");
+
+    expect(screen.getByRole("button", { name: "Dragon's Rage Channeler" })).toBeInTheDocument();
+  });
 });

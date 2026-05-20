@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
+import { buildCardReferenceMap } from "@/lib/domain/decklist";
 
 type HighlightPart = {
   text: string;
@@ -11,26 +12,34 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function matchesCardFragment(fragment: string, cardName: string) {
+type CardReference = {
+  cardName: string;
+  aliases: string[];
+};
+
+function matchesCardFragment(fragment: string, cardReference: CardReference) {
   const normalizedFragment = fragment.trim().toLowerCase();
 
   if (!normalizedFragment) {
     return false;
   }
 
-  const normalizedCard = cardName.toLowerCase();
-  if (normalizedCard.startsWith(normalizedFragment)) {
-    return true;
-  }
+  return cardReference.aliases.some((alias) => {
+    const normalizedAlias = alias.toLowerCase();
 
-  if (normalizedFragment.includes(" ")) {
-    return false;
-  }
+    if (normalizedAlias.startsWith(normalizedFragment)) {
+      return true;
+    }
 
-  return normalizedCard.split(/[\s,/-]+/).some((word) => word.startsWith(normalizedFragment));
+    if (normalizedFragment.includes(" ")) {
+      return false;
+    }
+
+    return normalizedAlias.split(/[\s,/-]+/).some((word) => word.startsWith(normalizedFragment));
+  });
 }
 
-function getReplacementRange(text: string, caretPosition: number, cardNames: string[]) {
+function getReplacementRange(text: string, caretPosition: number, cardReferences: CardReference[]) {
   const beforeCaret = text.slice(0, caretPosition);
   const tokenMatches = [...beforeCaret.matchAll(/\S+/g)];
   const trailingTokens = tokenMatches.slice(-4);
@@ -39,7 +48,7 @@ function getReplacementRange(text: string, caretPosition: number, cardNames: str
     const slice = trailingTokens.slice(trailingTokens.length - tokenCount);
     const fragment = slice.map((token) => token[0]).join(" ");
 
-    if (cardNames.some((cardName) => matchesCardFragment(fragment, cardName))) {
+    if (cardReferences.some((cardReference) => matchesCardFragment(fragment, cardReference))) {
       const first = slice[0];
       return {
         start: first.index ?? 0,
@@ -61,17 +70,18 @@ function getReplacementRange(text: string, caretPosition: number, cardNames: str
   };
 }
 
-function getHighlightParts(text: string, cardNames: string[]) {
+function getHighlightParts(text: string, cardReferences: CardReference[]) {
   if (!text) {
     return [{ text: "", highlighted: false }] satisfies HighlightPart[];
   }
 
-  const sortedNames = [...cardNames].sort((left, right) => right.length - left.length);
-  if (sortedNames.length === 0) {
+  const sortedAliases = [...new Set(cardReferences.flatMap((cardReference) => cardReference.aliases))]
+    .sort((left, right) => right.length - left.length);
+  if (sortedAliases.length === 0) {
     return [{ text, highlighted: false }] satisfies HighlightPart[];
   }
 
-  const matcher = new RegExp(sortedNames.map(escapeRegExp).join("|"), "gi");
+  const matcher = new RegExp(sortedAliases.map(escapeRegExp).join("|"), "gi");
   const parts: HighlightPart[] = [];
   let cursor = 0;
 
@@ -110,15 +120,22 @@ export function PlayTextComposer({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [caretPosition, setCaretPosition] = useState(value.length);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
-  const replacementRange = useMemo(() => getReplacementRange(value, caretPosition, cardNames), [value, caretPosition, cardNames]);
+  const cardReferences = useMemo(() => buildCardReferenceMap(cardNames), [cardNames]);
+  const replacementRange = useMemo(
+    () => getReplacementRange(value, caretPosition, cardReferences),
+    [value, caretPosition, cardReferences]
+  );
   const suggestions = useMemo(() => {
     if (!replacementRange?.fragment.trim()) {
       return [];
     }
 
-    return cardNames.filter((cardName) => matchesCardFragment(replacementRange.fragment, cardName)).slice(0, 6);
-  }, [cardNames, replacementRange]);
-  const highlightParts = useMemo(() => getHighlightParts(value, cardNames), [value, cardNames]);
+    return cardReferences
+      .filter((cardReference) => matchesCardFragment(replacementRange.fragment, cardReference))
+      .map((cardReference) => cardReference.cardName)
+      .slice(0, 6);
+  }, [cardReferences, replacementRange]);
+  const highlightParts = useMemo(() => getHighlightParts(value, cardReferences), [value, cardReferences]);
 
   function syncCaret(event: React.SyntheticEvent<HTMLTextAreaElement>) {
     setCaretPosition(event.currentTarget.selectionStart ?? event.currentTarget.value.length);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDecklistCardNames } from "./decklist";
+import { buildCardReferenceMap, parseDecklistCardNames } from "./decklist";
 
 describe("parseDecklistCardNames", () => {
   it("extracts unique card names from counted decklist lines", () => {
@@ -10,5 +10,18 @@ describe("parseDecklistCardNames", () => {
 
   it("keeps non-empty lines when no leading count is present", () => {
     expect(parseDecklistCardNames("Brainstorm\n\nSideboard")).toEqual(["Brainstorm", "Sideboard"]);
+  });
+
+  it("builds useful aliases for shorthand card references", () => {
+    expect(buildCardReferenceMap(["Lightning Bolt", "Dragon's Rage Channeler"])).toEqual([
+      {
+        cardName: "Lightning Bolt",
+        aliases: ["Lightning Bolt", "Lightning", "Bolt", "LB"]
+      },
+      {
+        cardName: "Dragon's Rage Channeler",
+        aliases: ["Dragon's Rage Channeler", "Dragon", "Rage", "Channeler", "DRC"]
+      }
+    ]);
   });
 });
