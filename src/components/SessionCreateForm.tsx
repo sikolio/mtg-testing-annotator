@@ -18,14 +18,14 @@ export function SessionCreateForm() {
   const [handBlockEnabled, setHandBlockEnabled] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState(DEFAULT_YOUTUBE_URL);
   const [handBlockX, setHandBlockX] = useState("3");
-  const [handBlockY, setHandBlockY] = useState("70");
+  const [handBlockY, setHandBlockY] = useState("0");
   const [handBlockWidth, setHandBlockWidth] = useState("94");
-  const [handBlockHeight, setHandBlockHeight] = useState("30");
+  const [handBlockHeight, setHandBlockHeight] = useState("8");
   const [handBlock2Enabled, setHandBlock2Enabled] = useState(false);
-  const [handBlock2X, setHandBlock2X] = useState("52");
-  const [handBlock2Y, setHandBlock2Y] = useState("70");
-  const [handBlock2Width, setHandBlock2Width] = useState("45");
-  const [handBlock2Height, setHandBlock2Height] = useState("30");
+  const [handBlock2X, setHandBlock2X] = useState("1");
+  const [handBlock2Y, setHandBlock2Y] = useState("24");
+  const [handBlock2Width, setHandBlock2Width] = useState("20");
+  const [handBlock2Height, setHandBlock2Height] = useState("24");
 
   let previewVideoId: string | null = null;
   try {
