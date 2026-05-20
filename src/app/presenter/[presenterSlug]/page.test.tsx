@@ -115,4 +115,105 @@ describe("PresenterPage", () => {
     expect(props.annotations).toHaveLength(1);
     expect(props.annotations[0].actionText).toBe("Fetch steam vents");
   });
+
+  it("updates existing annotations instead of upserting partial rows during aggregation persistence", async () => {
+    const session = {
+      id: "session-1",
+      youtube_video_id: "LBkEDKfWpaA",
+      decklist_text: "4 Lightning Bolt",
+      opponent_decklist_text: "",
+      hand_block_enabled: false,
+      hand_block_x: 0,
+      hand_block_y: 0,
+      hand_block_width: 0,
+      hand_block_height: 0,
+      hand_block_2_enabled: false,
+      hand_block_2_x: 0,
+      hand_block_2_y: 0,
+      hand_block_2_width: 0,
+      hand_block_2_height: 0
+    };
+
+    const annotationRow = {
+      id: "annotation-1",
+      session_id: "session-1",
+      decision_point_id: "checkpoint-1",
+      user_id: "user-1",
+      original_timestamp_seconds: 243.58,
+      action_type: "play_land",
+      action_text: "Fetch steam vents",
+      arguments_text: "I want my colors",
+      aggregation_cluster_id: null,
+      aggregated_action_label: null,
+      aggregation_version: null,
+      aggregated_at: null,
+      locked_at: "2026-05-20T00:00:00.000Z",
+      users: [{ email: "one@example.com" }],
+      annotation_verdicts: [{ verdict: "same_play" as const }]
+    };
+
+    const updateSpy = vi.fn(() => ({
+      eq: async () => ({ error: null })
+    }));
+
+    fakeSupabase.from.mockImplementation((table: string) => {
+      if (table === "review_sessions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({ data: session })
+            })
+          })
+        };
+      }
+
+      if (table === "decision_points") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({ data: [] })
+            })
+          })
+        };
+      }
+
+      if (table === "annotations") {
+        return {
+          select: () => ({
+            eq: async () => ({ data: [annotationRow], error: null })
+          }),
+          update: updateSpy
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    const aggregationModule = await import("@/lib/actions/aggregationActions");
+    const ensureSpy = vi
+      .spyOn(aggregationModule, "ensureSessionAggregation")
+      .mockImplementationOnce(async ({ persistAssignments, sessionId }) => {
+        await persistAssignments?.({
+          sessionId,
+          decisionPointId: "checkpoint-1",
+          assignments: [{ annotationId: "annotation-1", clusterId: "cluster-1", label: "Fetch steam vents" }],
+          aggregationVersion: "v1",
+          aggregatedAt: "2026-05-20T00:00:00.000Z"
+        });
+
+        return { updatedDecisionPointIds: ["checkpoint-1"] };
+      });
+
+    const { default: PresenterPage } = await import("./page");
+    await PresenterPage({ params: Promise.resolve({ presenterSlug: "presenter-slug" }) });
+
+    expect(updateSpy).toHaveBeenCalledWith({
+      aggregation_cluster_id: "cluster-1",
+      aggregated_action_label: "Fetch steam vents",
+      aggregation_version: "v1",
+      aggregated_at: "2026-05-20T00:00:00.000Z"
+    });
+
+    ensureSpy.mockRestore();
+  });
 });

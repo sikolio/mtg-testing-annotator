@@ -192,18 +192,20 @@ export default async function PresenterPage({ params }: { params: Promise<{ pres
         return;
       }
 
-      const { error } = await supabase.from("annotations").upsert(
-        assignments.map((assignment) => ({
-          id: assignment.annotationId,
-          aggregation_cluster_id: assignment.clusterId,
-          aggregated_action_label: assignment.label,
-          aggregation_version: aggregationVersion,
-          aggregated_at: aggregatedAt
-        }))
-      );
+      for (const assignment of assignments) {
+        const { error } = await supabase
+          .from("annotations")
+          .update({
+            aggregation_cluster_id: assignment.clusterId,
+            aggregated_action_label: assignment.label,
+            aggregation_version: aggregationVersion,
+            aggregated_at: aggregatedAt
+          })
+          .eq("id", assignment.annotationId);
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          throw new Error(error.message);
+        }
       }
     }
   });
