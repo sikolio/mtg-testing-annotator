@@ -111,12 +111,14 @@ export function PlayTextComposer({
   value,
   onChange,
   cardNames,
+  imageUrls,
   placeholder
 }: {
   name: string;
   value: string;
   onChange: (value: string) => void;
   cardNames: string[];
+  imageUrls?: Record<string, string | null>;
   placeholder: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -170,6 +172,13 @@ export function PlayTextComposer({
     const requestId = requestIdRef.current;
     setPreviewCardName(cardName);
     setPreviewAnchorElement(anchorElement);
+    const preloadedImageUrl = imageUrls?.[cardName];
+
+    if (typeof preloadedImageUrl !== "undefined") {
+      setPreviewImageUrl(preloadedImageUrl);
+      return;
+    }
+
     setPreviewImageUrl(null);
     const imageUrl = await fetchCardImageUrl(cardName);
 

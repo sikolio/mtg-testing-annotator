@@ -88,4 +88,28 @@ describe("CardHoverText", () => {
 
     await waitFor(() => expect(screen.getAllByAltText("Lightning Bolt preview")).toHaveLength(1));
   });
+
+  it("uses preloaded image urls without fetching on hover", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(
+      <CardHoverText
+        text="Cast Lightning Bolt"
+        cardNames={["Lightning Bolt"]}
+        imageUrls={{ "Lightning Bolt": "https://img.scryfall.com/cards/normal/lightning-bolt.jpg" }}
+      />
+    );
+
+    await user.hover(screen.getByText("Lightning Bolt"));
+
+    await waitFor(() =>
+      expect(screen.getByAltText("Lightning Bolt preview")).toHaveAttribute(
+        "src",
+        "https://img.scryfall.com/cards/normal/lightning-bolt.jpg"
+      )
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

@@ -51,10 +51,12 @@ function buildSegments(text: string, cardNames: string[]) {
 export function CardHoverText({
   text,
   cardNames,
+  imageUrls,
   className
 }: {
   text: string;
   cardNames: string[];
+  imageUrls?: Record<string, string | null>;
   className?: string;
 }) {
   const [previewCardName, setPreviewCardName] = useState<string | null>(null);
@@ -68,6 +70,13 @@ export function CardHoverText({
     const requestId = requestIdRef.current;
     setPreviewCardName(cardName);
     setPreviewAnchorElement(anchorElement);
+    const preloadedImageUrl = imageUrls?.[cardName];
+
+    if (typeof preloadedImageUrl !== "undefined") {
+      setPreviewImageUrl(preloadedImageUrl);
+      return;
+    }
+
     setPreviewImageUrl(null);
     const imageUrl = await fetchCardImageUrl(cardName);
 

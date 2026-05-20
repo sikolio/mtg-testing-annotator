@@ -7,6 +7,7 @@ import { PlayTextComposer } from "@/components/PlayTextComposer";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
 import { parseDecklistCardNames } from "@/lib/domain/decklist";
+import { useCardImageUrls } from "@/lib/useCardImageUrls";
 import { ACTION_TYPES, type ActionType, type Annotation, type DecisionPoint, type HandBlock } from "@/lib/types";
 
 type ReviewerWorkspaceProps = {
@@ -40,6 +41,11 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   const [isPending, startTransition] = useTransition();
   const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
   const deckCardSuggestions = useMemo(() => parseDecklistCardNames(session.decklistText), [session.decklistText]);
+  const allCardNames = useMemo(
+    () => [...new Set([...parseDecklistCardNames(session.decklistText), ...parseDecklistCardNames(session.opponentDecklistText)])],
+    [session.decklistText, session.opponentDecklistText]
+  );
+  const imageUrls = useCardImageUrls(allCardNames);
   const activeDecisionPointIndex = sortedDecisionPoints.findIndex((point) => point.id === activeDecisionPointId);
   const activeDecisionPoint =
     activeDecisionPointIndex >= 0 ? sortedDecisionPoints[activeDecisionPointIndex] : sortedDecisionPoints[0] ?? null;
@@ -138,6 +144,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
         <DecklistPanel
           title="Opponent decklist"
           decklistText={session.opponentDecklistText}
+          imageUrls={imageUrls}
           emptyMessage="No opponent decklist provided yet."
         />
       </aside>
@@ -216,6 +223,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
         <DecklistPanel
           title="Your decklist"
           decklistText={session.decklistText}
+          imageUrls={imageUrls}
         />
 
         <div className="panel">
@@ -247,6 +255,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                 value={actionText}
                 onChange={setActionText}
                 cardNames={deckCardSuggestions}
+                imageUrls={imageUrls}
                 placeholder="What play would you make?"
               />
               <textarea name="argumentsText" required rows={5} placeholder="Why this play and not another?" />

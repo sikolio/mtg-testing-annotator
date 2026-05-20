@@ -5,10 +5,12 @@ import { parseDecklistCardNames } from "@/lib/domain/decklist";
 export function DecklistPanel({
   title,
   decklistText,
+  imageUrls,
   emptyMessage
 }: {
   title: string;
   decklistText: string;
+  imageUrls?: Record<string, string | null>;
   emptyMessage?: string;
 }) {
   const cardNames = parseDecklistCardNames(decklistText);
@@ -17,7 +19,7 @@ export function DecklistPanel({
     <aside className="panel decklist-panel">
       <h2>{title}</h2>
       <pre>
-        {decklistText ? <CardHoverText text={decklistText} cardNames={cardNames} /> : emptyMessage || "No decklist provided yet."}
+        {decklistText ? <CardHoverText text={decklistText} cardNames={cardNames} imageUrls={imageUrls} /> : emptyMessage || "No decklist provided yet."}
       </pre>
     </aside>
   );

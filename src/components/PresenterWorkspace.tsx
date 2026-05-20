@@ -7,6 +7,7 @@ import { DecklistPanel } from "@/components/DecklistPanel";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { parseDecklistCardNames } from "@/lib/domain/decklist";
 import { groupAnnotationsForPresentation } from "@/lib/domain/presentation";
+import { useCardImageUrls } from "@/lib/useCardImageUrls";
 import type { Annotation, DecisionPoint, HandBlock } from "@/lib/types";
 
 type PresenterWorkspaceProps = {
@@ -41,6 +42,7 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
     () => [...new Set([...parseDecklistCardNames(session.decklistText), ...parseDecklistCardNames(session.opponentDecklistText)])],
     [session.decklistText, session.opponentDecklistText]
   );
+  const imageUrls = useCardImageUrls(cardNames);
 
   async function handleDecisionPointChange(point: DecisionPoint) {
     setActiveDecisionPointId(point.id);
@@ -68,6 +70,7 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
         <DecklistPanel
           title="Opponent decklist"
           decklistText={session.opponentDecklistText}
+          imageUrls={imageUrls}
           emptyMessage="No opponent decklist provided yet."
         />
       </aside>
@@ -123,6 +126,7 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
         <DecklistPanel
           title="Your decklist"
           decklistText={session.decklistText}
+          imageUrls={imageUrls}
         />
         <div className="panel">
           <div className="presentation-header">
@@ -150,8 +154,8 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
                 {group.annotations.map((annotation, index) => (
                   <div key={annotation.id} className="annotation-card">
                     <strong>{showIdentities ? annotation.reviewerEmail : `Reviewer ${index + 1}`}</strong>
-                    <p><CardHoverText text={annotation.actionText} cardNames={cardNames} /></p>
-                    <p><CardHoverText text={annotation.argumentsText} cardNames={cardNames} /></p>
+                    <p><CardHoverText text={annotation.actionText} cardNames={cardNames} imageUrls={imageUrls} /></p>
+                    <p><CardHoverText text={annotation.argumentsText} cardNames={cardNames} imageUrls={imageUrls} /></p>
                   </div>
                 ))}
               </article>

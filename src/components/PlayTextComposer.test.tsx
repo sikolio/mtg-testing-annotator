@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { clearScryfallImageCache } from "@/lib/scryfall";
 import { PlayTextComposer } from "./PlayTextComposer";
 
 const { createPopperMock } = vi.hoisted(() => ({
@@ -20,6 +21,7 @@ describe("PlayTextComposer", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     createPopperMock.mockClear();
+    clearScryfallImageCache();
   });
 
   it("inserts a matching card into freeform text instead of replacing the whole field", async () => {
@@ -137,5 +139,38 @@ describe("PlayTextComposer", () => {
         placement: "top"
       })
     );
+  });
+
+  it("uses preloaded image urls for suggestion previews", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [value, setValue] = React.useState("");
+      return (
+        <PlayTextComposer
+          name="actionText"
+          value={value}
+          onChange={setValue}
+          cardNames={["Lightning Bolt"]}
+          imageUrls={{ "Lightning Bolt": "https://img.scryfall.com/cards/normal/lightning-bolt.jpg" }}
+          placeholder="What play would you make?"
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    await user.type(screen.getByPlaceholderText("What play would you make?"), "Bolt");
+    await user.hover(screen.getByRole("button", { name: "Lightning Bolt" }));
+
+    await waitFor(() =>
+      expect(screen.getByAltText("Lightning Bolt preview")).toHaveAttribute(
+        "src",
+        "https://img.scryfall.com/cards/normal/lightning-bolt.jpg"
+      )
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
