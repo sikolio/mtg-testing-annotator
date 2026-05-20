@@ -1,5 +1,7 @@
 .superpowers/
 node_modules/
 .next/
+.next-dev.*
+tsconfig.tsbuildinfo
 .env*
 !.env.example
