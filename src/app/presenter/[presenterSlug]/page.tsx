@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { PresenterWorkspace } from "@/components/PresenterWorkspace";
 import { getLocalPresenterSession } from "@/lib/db/localStore";
-import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/db/server";
+import { createSupabaseServerClient, shouldUseLocalDevelopmentStore } from "@/lib/db/server";
 import type { ActionType, AnnotationVerdict } from "@/lib/types";
 
 export default async function PresenterPage({ params }: { params: Promise<{ presenterSlug: string }> }) {
   const { presenterSlug } = await params;
 
-  if (!hasSupabaseServerConfig()) {
+  if (shouldUseLocalDevelopmentStore()) {
     const local = await getLocalPresenterSession(presenterSlug);
 
     if (!local) {

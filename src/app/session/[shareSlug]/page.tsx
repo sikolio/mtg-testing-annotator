@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ReviewerWorkspace } from "@/components/ReviewerWorkspace";
 import { joinLocalReviewSession } from "@/lib/db/localStore";
-import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/db/server";
+import { createSupabaseServerClient, shouldUseLocalDevelopmentStore } from "@/lib/db/server";
 
 export default async function ReviewerPage({
   params,
@@ -13,7 +13,7 @@ export default async function ReviewerPage({
   const { shareSlug } = await params;
   const { email } = await searchParams;
 
-  if (!hasSupabaseServerConfig()) {
+  if (shouldUseLocalDevelopmentStore()) {
     const local = await joinLocalReviewSession({ shareSlug, email });
 
     if (!local) {

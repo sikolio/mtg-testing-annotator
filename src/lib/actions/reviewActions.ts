@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { CHECKPOINT_MERGE_THRESHOLD_SECONDS } from "@/lib/config";
 import { commitLocalAnnotation, mergeLocalDecisionPoints, submitLocalVerdict } from "@/lib/db/localStore";
-import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/db/server";
+import { createSupabaseServerClient, shouldUseLocalDevelopmentStore } from "@/lib/db/server";
 import { findNearestDecisionPoint, normalizeTimestampSeconds } from "@/lib/domain/checkpoints";
 import { ACTION_TYPES, VERDICTS } from "@/lib/types";
 
@@ -19,7 +19,7 @@ const annotationSchema = z.object({
 export async function commitAnnotation(input: z.input<typeof annotationSchema>) {
   const payload = annotationSchema.parse(input);
 
-  if (!hasSupabaseServerConfig()) {
+  if (shouldUseLocalDevelopmentStore()) {
     return commitLocalAnnotation(payload);
   }
 
@@ -95,7 +95,7 @@ const verdictSchema = z.object({
 export async function submitVerdict(input: z.input<typeof verdictSchema>) {
   const payload = verdictSchema.parse(input);
 
-  if (!hasSupabaseServerConfig()) {
+  if (shouldUseLocalDevelopmentStore()) {
     await submitLocalVerdict(payload);
     return;
   }
@@ -122,7 +122,7 @@ const mergeSchema = z.object({
 export async function mergeDecisionPoints(input: z.input<typeof mergeSchema>) {
   const payload = mergeSchema.parse(input);
 
-  if (!hasSupabaseServerConfig()) {
+  if (shouldUseLocalDevelopmentStore()) {
     await mergeLocalDecisionPoints(payload);
     return;
   }

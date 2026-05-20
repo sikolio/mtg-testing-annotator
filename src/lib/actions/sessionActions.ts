@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { buildCreateSessionPayload, type CreateSessionInput } from "@/lib/actions/sessionPayload";
 import { createLocalReviewSession } from "@/lib/db/localStore";
-import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/db/server";
+import { createSupabaseServerClient, shouldUseLocalDevelopmentStore } from "@/lib/db/server";
 
 function createSlug() {
   return randomUUID().replaceAll("-", "").slice(0, 16);
@@ -13,7 +13,7 @@ function createSlug() {
 export async function createReviewSession(input: CreateSessionInput) {
   const payload = buildCreateSessionPayload(input);
 
-  if (!hasSupabaseServerConfig()) {
+  if (shouldUseLocalDevelopmentStore()) {
     const links = await createLocalReviewSession({ payload, createSlug });
     revalidatePath("/");
     return links;
