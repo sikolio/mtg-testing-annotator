@@ -1,11 +1,27 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlayTextComposer } from "./PlayTextComposer";
 
+const { createPopperMock } = vi.hoisted(() => ({
+  createPopperMock: vi.fn(() => ({
+    destroy: vi.fn(),
+    update: vi.fn()
+  }))
+}));
+
+vi.mock("@popperjs/core", () => ({
+  createPopper: createPopperMock
+}));
+
 describe("PlayTextComposer", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    createPopperMock.mockClear();
+  });
+
   it("inserts a matching card into freeform text instead of replacing the whole field", async () => {
     const user = userEvent.setup();
     const handleChange = vi.fn();
@@ -77,5 +93,49 @@ describe("PlayTextComposer", () => {
     await user.type(textbox, "attack with drc");
 
     expect(screen.getByRole("button", { name: "Dragon's Rage Channeler" })).toBeInTheDocument();
+  });
+
+  it("positions suggestion previews with Popper", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          image_uris: {
+            normal: "https://img.scryfall.com/cards/normal/lightning-bolt.jpg"
+          }
+        })
+      }))
+    );
+
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [value, setValue] = React.useState("");
+      return (
+        <PlayTextComposer
+          name="actionText"
+          value={value}
+          onChange={setValue}
+          cardNames={["Lightning Bolt"]}
+          placeholder="What play would you make?"
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    await user.type(screen.getByPlaceholderText("What play would you make?"), "Bolt");
+    const suggestion = screen.getByRole("button", { name: "Lightning Bolt" });
+    await user.hover(suggestion);
+
+    await waitFor(() => expect(screen.getByAltText("Lightning Bolt preview")).toBeInTheDocument());
+    expect(createPopperMock).toHaveBeenCalledWith(
+      suggestion,
+      expect.any(HTMLSpanElement),
+      expect.objectContaining({
+        placement: "top"
+      })
+    );
   });
 });

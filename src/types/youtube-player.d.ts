@@ -8,6 +8,7 @@ declare module "youtube-player" {
     destroy?: () => Promise<void> | void;
     cueVideoById: (videoId: string, startSeconds?: number) => Promise<void>;
     getCurrentTime: () => Promise<number>;
+    mute: () => Promise<void>;
     pauseVideo: () => Promise<void>;
     playVideo: () => Promise<void>;
     seekTo: (seconds: number, allowSeekAhead?: boolean) => Promise<void>;

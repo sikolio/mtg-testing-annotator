@@ -9,6 +9,7 @@ type YouTubePlayerInstance = {
   cueVideoById: (videoId: string, startSeconds?: number) => Promise<void>;
   destroy?: () => Promise<void> | void;
   getCurrentTime: () => Promise<number>;
+  mute: () => Promise<void>;
   off: (listener: (event: { data: number }) => void) => void;
   on: (eventName: string, listener: (event: { data: number }) => void) => void;
   pauseVideo: () => Promise<void>;
@@ -63,12 +64,14 @@ export const YouTubePlayer = forwardRef<
       playerVars: {
         autoplay: 0,
         controls: 1,
+        mute: 1,
         rel: 0
       }
     });
 
     playerRef.current = player;
     hasStartedPlaybackRef.current = false;
+    void player.mute();
     void player.pauseVideo();
 
     const handleStateChange = (event: { data: number }) => {

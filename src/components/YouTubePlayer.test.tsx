@@ -10,6 +10,7 @@ const { playerFactory, playerState } = vi.hoisted(() => {
     cueVideoById: vi.fn(() => Promise.resolve()),
     destroy: vi.fn(),
     getCurrentTime: vi.fn(() => Promise.resolve(37.91)),
+    mute: vi.fn(() => Promise.resolve()),
     off: vi.fn((listener: (event: { data: number }) => void) => {
       if (stateChangeListener === listener) {
         stateChangeListener = null;
@@ -44,6 +45,7 @@ afterEach(() => {
   playerState.destroy.mockClear();
   playerState.cueVideoById.mockClear();
   playerState.getCurrentTime.mockClear();
+  playerState.mute.mockClear();
   playerState.off.mockClear();
   playerState.on.mockClear();
   playerState.pauseVideo.mockClear();
@@ -53,7 +55,7 @@ afterEach(() => {
 });
 
 describe("YouTubePlayer", () => {
-  it("starts paused and can read the exact current time", async () => {
+  it("starts muted and paused and can read the exact current time", async () => {
     const ref = createRef<YouTubePlayerHandle>();
 
     render(<YouTubePlayer ref={ref} videoId="LBkEDKfWpaA" handBlocks={[]} />);
@@ -66,10 +68,12 @@ describe("YouTubePlayer", () => {
       playerVars: {
         autoplay: 0,
         controls: 1,
+        mute: 1,
         rel: 0
       },
       videoId: "LBkEDKfWpaA"
     });
+    expect(playerState.mute).toHaveBeenCalledTimes(1);
     expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
     expect(playerState.getCurrentTime).toHaveBeenCalledTimes(1);
   });

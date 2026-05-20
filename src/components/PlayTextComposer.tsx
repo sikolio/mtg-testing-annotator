@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
+import { CardPreviewPopover } from "@/components/CardPreviewPopover";
 import { buildCardReferenceMap } from "@/lib/domain/decklist";
 import { fetchCardImageUrl } from "@/lib/scryfall";
 
@@ -123,6 +124,8 @@ export function PlayTextComposer({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const [previewCardName, setPreviewCardName] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewAnchorElement, setPreviewAnchorElement] = useState<HTMLElement | null>(null);
+  const requestIdRef = useRef(0);
   const cardReferences = useMemo(() => buildCardReferenceMap(cardNames), [cardNames]);
   const replacementRange = useMemo(
     () => getReplacementRange(value, caretPosition, cardReferences),
@@ -162,11 +165,24 @@ export function PlayTextComposer({
     });
   }
 
-  async function showPreview(cardName: string) {
+  async function showPreview(cardName: string, anchorElement: HTMLElement) {
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
     setPreviewCardName(cardName);
+    setPreviewAnchorElement(anchorElement);
     setPreviewImageUrl(null);
     const imageUrl = await fetchCardImageUrl(cardName);
-    setPreviewImageUrl(imageUrl);
+
+    if (requestId === requestIdRef.current) {
+      setPreviewImageUrl(imageUrl);
+    }
+  }
+
+  function hidePreview() {
+    requestIdRef.current += 1;
+    setPreviewCardName(null);
+    setPreviewAnchorElement(null);
+    setPreviewImageUrl(null);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -233,23 +249,16 @@ export function PlayTextComposer({
               type="button"
               className={index === activeSuggestionIndex ? "secondary active" : "secondary"}
               onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => void showPreview(cardName)}
-              onMouseLeave={() => {
-                setPreviewCardName(null);
-                setPreviewImageUrl(null);
-              }}
+              onMouseEnter={(event) => void showPreview(cardName, event.currentTarget)}
+              onMouseLeave={hidePreview}
               onClick={() => applySuggestion(cardName)}
             >
               {cardName}
-              {previewCardName === cardName ? (
-                <span className="card-preview suggestion-preview">
-                  {previewImageUrl ? <img src={previewImageUrl} alt={`${cardName} preview`} /> : <span className="card-preview-loading">Loading...</span>}
-                </span>
-              ) : null}
             </button>
           ))}
         </div>
       ) : null}
+      <CardPreviewPopover anchorElement={previewAnchorElement} cardName={previewCardName} imageUrl={previewImageUrl} />
     </div>
   );
 }

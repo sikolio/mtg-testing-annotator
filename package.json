@@ -10,6 +10,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "@supabase/supabase-js": "^2.49.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",

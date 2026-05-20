@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import { CardPreviewPopover } from "@/components/CardPreviewPopover";
 import { buildCardReferenceMap } from "@/lib/domain/decklist";
 import { fetchCardImageUrl } from "@/lib/scryfall";
 
@@ -58,13 +59,28 @@ export function CardHoverText({
 }) {
   const [previewCardName, setPreviewCardName] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewAnchorElement, setPreviewAnchorElement] = useState<HTMLElement | null>(null);
+  const requestIdRef = useRef(0);
   const segments = useMemo(() => buildSegments(text, cardNames), [text, cardNames]);
 
-  async function showPreview(cardName: string) {
+  async function showPreview(cardName: string, anchorElement: HTMLElement) {
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
     setPreviewCardName(cardName);
+    setPreviewAnchorElement(anchorElement);
     setPreviewImageUrl(null);
     const imageUrl = await fetchCardImageUrl(cardName);
-    setPreviewImageUrl((current) => (previewCardName === cardName || current === null ? imageUrl : current));
+
+    if (requestId === requestIdRef.current) {
+      setPreviewImageUrl(imageUrl);
+    }
+  }
+
+  function hidePreview() {
+    requestIdRef.current += 1;
+    setPreviewCardName(null);
+    setPreviewAnchorElement(null);
+    setPreviewImageUrl(null);
   }
 
   return (
@@ -74,27 +90,16 @@ export function CardHoverText({
           <span
             key={`${segment.text}-${index}`}
             className="card-mention"
-            onMouseEnter={() => void showPreview(segment.cardName as string)}
-            onMouseLeave={() => {
-              setPreviewCardName(null);
-              setPreviewImageUrl(null);
-            }}
+            onMouseEnter={(event) => void showPreview(segment.cardName as string, event.currentTarget)}
+            onMouseLeave={hidePreview}
           >
             {segment.text}
-            {previewCardName === segment.cardName ? (
-              <span className="card-preview">
-                {previewImageUrl ? (
-                  <img src={previewImageUrl} alt={`${segment.cardName} preview`} />
-                ) : (
-                  <span className="card-preview-loading">Loading...</span>
-                )}
-              </span>
-            ) : null}
           </span>
         ) : (
           <span key={`${segment.text}-${index}`}>{segment.text}</span>
         )
       )}
+      <CardPreviewPopover anchorElement={previewAnchorElement} cardName={previewCardName} imageUrl={previewImageUrl} />
     </span>
   );
 }
