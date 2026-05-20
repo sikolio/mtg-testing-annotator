@@ -59,6 +59,25 @@ describe("ReviewerWorkspace", () => {
     expect(screen.getByText("4 Lightning Bolt")).toBeInTheDocument();
   });
 
+  it("offers deck card names as autocomplete suggestions for the play input", () => {
+    const { container } = render(
+      <ReviewerWorkspace
+        session={{
+          ...session,
+          decklistText: "4 Lightning Bolt\n2 Ragavan, Nimble Pilferer"
+        }}
+        user={user}
+        decisionPoints={[]}
+      />
+    );
+
+    expect(screen.getByPlaceholderText("What play would you make?")).toHaveAttribute("list", "deck-card-suggestions");
+    const suggestionValues = [...container.querySelectorAll("#deck-card-suggestions option")].map((option) =>
+      option.getAttribute("value")
+    );
+    expect(suggestionValues).toEqual(["Lightning Bolt", "Ragavan, Nimble Pilferer"]);
+  });
+
   it("pauses the video and copies the exact current player timestamp into the annotation field", async () => {
     const userEventApi = userEvent.setup();
 

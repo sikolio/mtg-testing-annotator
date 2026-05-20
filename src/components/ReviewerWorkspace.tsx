@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { DecklistPanel } from "@/components/DecklistPanel";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
+import { parseDecklistCardNames } from "@/lib/domain/decklist";
 import { ACTION_TYPES, type ActionType, type Annotation, type DecisionPoint, type HandBlock } from "@/lib/types";
 
 type ReviewerWorkspaceProps = {
@@ -29,6 +30,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+  const deckCardSuggestions = useMemo(() => parseDecklistCardNames(session.decklistText), [session.decklistText]);
 
   function handleAnnotation(formData: FormData) {
     setMessage(null);
@@ -169,7 +171,17 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                   </option>
                 ))}
               </select>
-              <input name="actionText" required placeholder="What play would you make?" />
+              <input
+                name="actionText"
+                required
+                list="deck-card-suggestions"
+                placeholder="What play would you make?"
+              />
+              <datalist id="deck-card-suggestions">
+                {deckCardSuggestions.map((cardName) => (
+                  <option key={cardName} value={cardName} />
+                ))}
+              </datalist>
               <textarea name="argumentsText" required rows={5} placeholder="Why this play and not another?" />
               <button type="submit" disabled={isPending}>
                 Commit and continue
