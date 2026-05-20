@@ -42,7 +42,6 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   const [activeDecisionPointId, setActiveDecisionPointId] = useState(decisionPoints[0]?.id ?? "");
   const [isPending, startTransition] = useTransition();
   const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
-  const deckCardSuggestions = useMemo(() => parseDecklistCardNames(session.decklistText), [session.decklistText]);
   const allCardNames = useMemo(
     () => [...new Set([...parseDecklistCardNames(session.decklistText), ...parseDecklistCardNames(session.opponentDecklistText)])],
     [session.decklistText, session.opponentDecklistText]
@@ -284,7 +283,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                 name="parsedActionText"
                 value={parsedActionText}
                 onChange={setParsedActionText}
-                cardNames={deckCardSuggestions}
+                cardNames={allCardNames}
                 imageUrls={imageUrls}
                 placeholder="Confirm the parsed play"
               />
@@ -303,7 +302,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                 name="actionText"
                 value={actionText}
                 onChange={setActionText}
-                cardNames={deckCardSuggestions}
+                cardNames={allCardNames}
                 imageUrls={imageUrls}
                 placeholder="What play would you make?"
               />

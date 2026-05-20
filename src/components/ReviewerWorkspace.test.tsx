@@ -106,6 +106,26 @@ describe("ReviewerWorkspace", () => {
     expect(screen.getByRole("button", { name: "Ragavan, Nimble Pilferer" })).toBeInTheDocument();
   });
 
+  it("offers opponent deck cards in the freeform play suggestions too", async () => {
+    const userEventApi = userEvent.setup();
+
+    render(
+      <ReviewerWorkspace
+        session={{
+          ...session,
+          decklistText: "4 Lightning Bolt",
+          opponentDecklistText: "4 Thoughtseize\n2 Orcish Bowmasters"
+        }}
+        user={user}
+        decisionPoints={[]}
+      />
+    );
+
+    await userEventApi.type(screen.getByPlaceholderText("What play would you make?"), "thought");
+
+    expect(screen.getByRole("button", { name: "Thoughtseize" })).toBeInTheDocument();
+  });
+
   it("parses a play, shows the editable interpretation, and only then moves to verdicts", async () => {
     const userEventApi = userEvent.setup();
     vi.mocked(draftAnnotation).mockResolvedValue({
