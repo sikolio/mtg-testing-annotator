@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCardReferenceMap, parseDecklistCardNames } from "./decklist";
+import { buildCardReferenceMap, findCardAliasMatches, parseDecklistCardNames } from "./decklist";
 
 describe("parseDecklistCardNames", () => {
   it("extracts unique card names from counted decklist lines", () => {
@@ -22,6 +22,13 @@ describe("parseDecklistCardNames", () => {
         cardName: "Dragon's Rage Channeler",
         aliases: ["Dragon's Rage Channeler", "Dragon", "Rage", "Channeler", "DRC"]
       }
+    ]);
+  });
+
+  it("matches aliases only at token boundaries", () => {
+    expect(findCardAliasMatches("Cast Dragon's Rage Channeler", ["Steam Vents", "Dragon's Rage Channeler"])).toEqual([
+      { text: "Cast " },
+      { text: "Dragon's Rage Channeler", cardName: "Dragon's Rage Channeler" }
     ]);
   });
 });

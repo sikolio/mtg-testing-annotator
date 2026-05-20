@@ -2,51 +2,8 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { CardPreviewPopover } from "@/components/CardPreviewPopover";
-import { buildCardReferenceMap } from "@/lib/domain/decklist";
+import { findCardAliasMatches } from "@/lib/domain/decklist";
 import { fetchCardImageUrl } from "@/lib/scryfall";
-
-type Segment = {
-  text: string;
-  cardName?: string;
-};
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function buildSegments(text: string, cardNames: string[]) {
-  const references = buildCardReferenceMap(cardNames);
-  const aliasEntries = references
-    .flatMap((reference) => reference.aliases.map((alias) => ({ alias, cardName: reference.cardName })))
-    .sort((left, right) => right.alias.length - left.alias.length);
-
-  if (aliasEntries.length === 0) {
-    return [{ text }] satisfies Segment[];
-  }
-
-  const matcher = new RegExp(aliasEntries.map((entry) => escapeRegExp(entry.alias)).join("|"), "gi");
-  const segments: Segment[] = [];
-  let cursor = 0;
-
-  for (const match of text.matchAll(matcher)) {
-    const start = match.index ?? 0;
-    const matchedText = match[0];
-    const aliasEntry = aliasEntries.find((entry) => entry.alias.toLowerCase() === matchedText.toLowerCase());
-
-    if (start > cursor) {
-      segments.push({ text: text.slice(cursor, start) });
-    }
-
-    segments.push({ text: matchedText, cardName: aliasEntry?.cardName });
-    cursor = start + matchedText.length;
-  }
-
-  if (cursor < text.length) {
-    segments.push({ text: text.slice(cursor) });
-  }
-
-  return segments;
-}
 
 export function CardHoverText({
   text,
@@ -63,7 +20,7 @@ export function CardHoverText({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewAnchorElement, setPreviewAnchorElement] = useState<HTMLElement | null>(null);
   const requestIdRef = useRef(0);
-  const segments = useMemo(() => buildSegments(text, cardNames), [text, cardNames]);
+  const segments = useMemo(() => findCardAliasMatches(text, cardNames), [text, cardNames]);
 
   async function showPreview(cardName: string, anchorElement: HTMLElement) {
     requestIdRef.current += 1;

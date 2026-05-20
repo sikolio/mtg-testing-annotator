@@ -68,6 +68,21 @@ describe("PlayTextComposer", () => {
     expect(screen.getByText("Lightning Bolt", { selector: "mark" })).toBeInTheDocument();
   });
 
+  it("does not highlight short aliases inside larger words", () => {
+    render(
+      <PlayTextComposer
+        name="actionText"
+        value="Cast Dragon's Rage Channeler"
+        onChange={() => undefined}
+        cardNames={["Steam Vents", "Dragon's Rage Channeler"]}
+        placeholder="What play would you make?"
+      />
+    );
+
+    expect(screen.queryByText("St", { selector: "mark" })).not.toBeInTheDocument();
+    expect(screen.getByText("Dragon's Rage Channeler", { selector: "mark" })).toBeInTheDocument();
+  });
+
   it("suggests cards from shorthand references like single words and acronyms", async () => {
     const user = userEvent.setup();
 

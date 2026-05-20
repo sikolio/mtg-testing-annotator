@@ -114,6 +114,18 @@ describe("CardHoverText", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("does not match short aliases inside larger words", () => {
+    render(
+      <CardHoverText
+        text="Cast Dragon's Rage Channeler"
+        cardNames={["Steam Vents", "Dragon's Rage Channeler"]}
+      />
+    );
+
+    expect(screen.queryByText("St", { selector: ".card-mention" })).not.toBeInTheDocument();
+    expect(screen.getByText("Dragon's Rage Channeler", { selector: ".card-mention" })).toBeInTheDocument();
+  });
+
   it("repositions the preview after the card image loads", async () => {
     vi.stubGlobal(
       "fetch",

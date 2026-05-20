@@ -2,17 +2,13 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { CardPreviewPopover } from "@/components/CardPreviewPopover";
-import { buildCardReferenceMap } from "@/lib/domain/decklist";
+import { buildCardReferenceMap, findCardAliasMatches } from "@/lib/domain/decklist";
 import { fetchCardImageUrl } from "@/lib/scryfall";
 
 type HighlightPart = {
   text: string;
   highlighted: boolean;
 };
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 type CardReference = {
   cardName: string;
@@ -77,33 +73,13 @@ function getHighlightParts(text: string, cardReferences: CardReference[]) {
     return [{ text: "", highlighted: false }] satisfies HighlightPart[];
   }
 
-  const sortedAliases = [...new Set(cardReferences.flatMap((cardReference) => cardReference.aliases))]
-    .sort((left, right) => right.length - left.length);
-  if (sortedAliases.length === 0) {
-    return [{ text, highlighted: false }] satisfies HighlightPart[];
-  }
-
-  const matcher = new RegExp(sortedAliases.map(escapeRegExp).join("|"), "gi");
-  const parts: HighlightPart[] = [];
-  let cursor = 0;
-
-  for (const match of text.matchAll(matcher)) {
-    const start = match.index ?? 0;
-    const matchedText = match[0];
-
-    if (start > cursor) {
-      parts.push({ text: text.slice(cursor, start), highlighted: false });
-    }
-
-    parts.push({ text: matchedText, highlighted: true });
-    cursor = start + matchedText.length;
-  }
-
-  if (cursor < text.length) {
-    parts.push({ text: text.slice(cursor), highlighted: false });
-  }
-
-  return parts;
+  return findCardAliasMatches(
+    text,
+    cardReferences.map((cardReference) => cardReference.cardName)
+  ).map((segment) => ({
+    text: segment.text,
+    highlighted: Boolean(segment.cardName)
+  }));
 }
 
 export function PlayTextComposer({
