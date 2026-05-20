@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import React from "react";
+import { useRef, useState, useTransition } from "react";
 import { DecklistPanel } from "@/components/DecklistPanel";
-import { YouTubePlayer } from "@/components/YouTubePlayer";
+import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
 import { ACTION_TYPES, type ActionType, type Annotation, type DecisionPoint, type HandBlock } from "@/lib/types";
 
@@ -21,6 +22,7 @@ type ReviewerWorkspaceProps = {
 };
 
 export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWorkspaceProps) {
+  const playerRef = useRef<YouTubePlayerHandle | null>(null);
   const [timestampSeconds, setTimestampSeconds] = useState(0);
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -77,12 +79,21 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
     });
   }
 
+  async function handleAddAnnotation() {
+    playerRef.current?.pause();
+    const currentTime = await playerRef.current?.getCurrentTime();
+
+    if (typeof currentTime === "number") {
+      setTimestampSeconds(Number(currentTime.toFixed(2)));
+    }
+  }
+
   return (
     <main className="workspace">
       <section className="review-main">
-        <YouTubePlayer videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
+        <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
         <div className="panel timeline-panel">
-          <button type="button" onClick={() => setTimestampSeconds((value) => Number((value + 5).toFixed(2)))}>
+          <button type="button" onClick={handleAddAnnotation}>
             Add annotation
           </button>
           <label className="timestamp-field">
