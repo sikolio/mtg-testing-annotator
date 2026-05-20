@@ -2,6 +2,7 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { buildCardReferenceMap } from "@/lib/domain/decklist";
+import { fetchCardImageUrl } from "@/lib/scryfall";
 
 type HighlightPart = {
   text: string;
@@ -120,6 +121,8 @@ export function PlayTextComposer({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [caretPosition, setCaretPosition] = useState(value.length);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const [previewCardName, setPreviewCardName] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const cardReferences = useMemo(() => buildCardReferenceMap(cardNames), [cardNames]);
   const replacementRange = useMemo(
     () => getReplacementRange(value, caretPosition, cardReferences),
@@ -157,6 +160,13 @@ export function PlayTextComposer({
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(nextCaretPosition, nextCaretPosition);
     });
+  }
+
+  async function showPreview(cardName: string) {
+    setPreviewCardName(cardName);
+    setPreviewImageUrl(null);
+    const imageUrl = await fetchCardImageUrl(cardName);
+    setPreviewImageUrl(imageUrl);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -223,9 +233,19 @@ export function PlayTextComposer({
               type="button"
               className={index === activeSuggestionIndex ? "secondary active" : "secondary"}
               onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => void showPreview(cardName)}
+              onMouseLeave={() => {
+                setPreviewCardName(null);
+                setPreviewImageUrl(null);
+              }}
               onClick={() => applySuggestion(cardName)}
             >
               {cardName}
+              {previewCardName === cardName ? (
+                <span className="card-preview suggestion-preview">
+                  {previewImageUrl ? <img src={previewImageUrl} alt={`${cardName} preview`} /> : <span className="card-preview-loading">Loading...</span>}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>

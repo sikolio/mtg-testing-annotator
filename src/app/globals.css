@@ -246,6 +246,51 @@ button:disabled {
   gap: 8px;
 }
 
+.card-hover-text {
+  white-space: pre-wrap;
+}
+
+.card-mention {
+  position: relative;
+  text-decoration: underline;
+  text-decoration-color: rgba(46, 125, 101, 0.45);
+  text-underline-offset: 2px;
+}
+
+.card-preview {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  width: 220px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(30, 36, 32, 0.14);
+}
+
+.card-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.card-preview-loading {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.play-suggestions button {
+  position: relative;
+}
+
+.suggestion-preview {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .timestamp-field {
   color: var(--muted);
 }

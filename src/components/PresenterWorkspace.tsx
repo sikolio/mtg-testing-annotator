@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CardHoverText } from "@/components/CardHoverText";
 import { DecklistPanel } from "@/components/DecklistPanel";
 import { YouTubePlayer } from "@/components/YouTubePlayer";
+import { parseDecklistCardNames } from "@/lib/domain/decklist";
 import { groupAnnotationsForPresentation } from "@/lib/domain/presentation";
 import type { Annotation, DecisionPoint, HandBlock } from "@/lib/types";
 
@@ -24,6 +26,10 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
   const activeAnnotations = annotations.filter((annotation) => annotation.decisionPointId === activeDecisionPointId);
   const groups = useMemo(() => groupAnnotationsForPresentation(activeAnnotations), [activeAnnotations]);
   const activePoint = decisionPoints.find((point) => point.id === activeDecisionPointId);
+  const cardNames = useMemo(
+    () => [...new Set([...parseDecklistCardNames(session.decklistText), ...parseDecklistCardNames(session.opponentDecklistText)])],
+    [session.decklistText, session.opponentDecklistText]
+  );
 
   return (
     <main className="workspace">
@@ -85,8 +91,8 @@ export function PresenterWorkspace({ session, decisionPoints, annotations }: Pre
                 {group.annotations.map((annotation, index) => (
                   <div key={annotation.id} className="annotation-card">
                     <strong>{showIdentities ? annotation.reviewerEmail : `Reviewer ${index + 1}`}</strong>
-                    <p>{annotation.actionText}</p>
-                    <p>{annotation.argumentsText}</p>
+                    <p><CardHoverText text={annotation.actionText} cardNames={cardNames} /></p>
+                    <p><CardHoverText text={annotation.argumentsText} cardNames={cardNames} /></p>
                   </div>
                 ))}
               </article>

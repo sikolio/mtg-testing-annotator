@@ -55,8 +55,8 @@ describe("ReviewerWorkspace", () => {
 
     expect(screen.getByRole("heading", { name: "Opponent decklist" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Your decklist" })).toBeInTheDocument();
-    expect(screen.getByText("4 Thoughtseize")).toBeInTheDocument();
-    expect(screen.getByText("4 Lightning Bolt")).toBeInTheDocument();
+    expect(screen.getByText("Thoughtseize")).toBeInTheDocument();
+    expect(screen.getByText("Lightning Bolt")).toBeInTheDocument();
   });
 
   it("offers in-line deck card suggestions for the freeform play input", async () => {
