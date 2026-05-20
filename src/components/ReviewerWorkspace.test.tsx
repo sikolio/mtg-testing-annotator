@@ -27,16 +27,35 @@ const playerState = {
   pauseVideo: vi.fn()
 };
 
-const playerConstructor = vi.fn((_element: HTMLElement, options: { events?: { onReady?: (event: unknown) => void } }) => {
-  options.events?.onReady?.({ target: playerState });
-  return playerState;
-});
+let latestPlayerEvents:
+  | {
+      onReady?: (event: { target: typeof playerState }) => void;
+      onStateChange?: (event: { data: number; target: typeof playerState }) => void;
+    }
+  | undefined;
+
+const playerConstructor = vi.fn(
+  (
+    _element: HTMLElement,
+    options: {
+      events?: {
+        onReady?: (event: { target: typeof playerState }) => void;
+        onStateChange?: (event: { data: number; target: typeof playerState }) => void;
+      };
+    }
+  ) => {
+    latestPlayerEvents = options.events;
+    options.events?.onReady?.({ target: playerState });
+    return playerState;
+  }
+);
 
 afterEach(() => {
   vi.useRealTimers();
   playerState.getCurrentTime.mockClear();
   playerState.pauseVideo.mockClear();
   playerConstructor.mockClear();
+  latestPlayerEvents = undefined;
   delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).YT;
   delete (window as { YT?: unknown; onYouTubeIframeAPIReady?: unknown }).onYouTubeIframeAPIReady;
   document.head.innerHTML = "";
@@ -57,7 +76,6 @@ describe("ReviewerWorkspace", () => {
   });
 
   it("autopauses when playback reaches a community checkpoint", async () => {
-    vi.useFakeTimers();
     (window as { YT?: unknown }).YT = { Player: playerConstructor };
     playerState.getCurrentTime
       .mockReturnValueOnce(9.6)
@@ -78,12 +96,16 @@ describe("ReviewerWorkspace", () => {
       />
     );
 
+    await waitFor(() => expect(playerConstructor).toHaveBeenCalledTimes(1));
+    vi.useFakeTimers();
+
     await act(async () => {
+      latestPlayerEvents?.onStateChange?.({ data: 1, target: playerState });
       await vi.advanceTimersByTimeAsync(1600);
     });
 
     expect(screen.getByLabelText("Current timestamp")).toHaveValue(10);
     expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
-    expect(playerState.getCurrentTime).toHaveBeenCalledTimes(2);
+    expect(playerState.getCurrentTime.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

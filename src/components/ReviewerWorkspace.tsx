@@ -24,6 +24,8 @@ type ReviewerWorkspaceProps = {
 export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWorkspaceProps) {
   const playerRef = useRef<YouTubePlayerHandle | null>(null);
   const handledCheckpointIdsRef = useRef<Set<string>>(new Set());
+  const decisionPointsRef = useRef(decisionPoints);
+  const pendingAnnotationRef = useRef<Annotation | null>(null);
   const [timestampSeconds, setTimestampSeconds] = useState(0);
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,39 +36,31 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   }, [session.id]);
 
   useEffect(() => {
-    if (decisionPoints.length === 0) {
+    decisionPointsRef.current = decisionPoints;
+  }, [decisionPoints]);
+
+  useEffect(() => {
+    pendingAnnotationRef.current = pendingAnnotation;
+  }, [pendingAnnotation]);
+
+  async function handlePlaybackTime(currentTime: number) {
+    const checkpoint = [...decisionPointsRef.current]
+      .sort((a, b) => a.timestampSeconds - b.timestampSeconds)
+      .find((point) => !handledCheckpointIdsRef.current.has(point.id) && currentTime >= point.timestampSeconds);
+
+    if (!checkpoint) {
       return;
     }
 
-    const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
-    const interval = window.setInterval(async () => {
-      const currentTime = await playerRef.current?.getCurrentTime();
-
-      if (typeof currentTime !== "number") {
-        return;
-      }
-
-      const checkpoint = sortedDecisionPoints.find(
-        (point) =>
-          !handledCheckpointIdsRef.current.has(point.id) && currentTime >= point.timestampSeconds
-      );
-
-      if (!checkpoint) {
-        return;
-      }
-
-      handledCheckpointIdsRef.current.add(checkpoint.id);
-      await playerRef.current?.pause();
-      setTimestampSeconds(checkpoint.timestampSeconds);
-      setMessage(
-        pendingAnnotation
-          ? "Checkpoint reached. Record the verdict for your previous play."
-          : "Checkpoint reached. Add your annotation for this decision."
-      );
-    }, 750);
-
-    return () => window.clearInterval(interval);
-  }, [decisionPoints, pendingAnnotation]);
+    handledCheckpointIdsRef.current.add(checkpoint.id);
+    await playerRef.current?.pause();
+    setTimestampSeconds(checkpoint.timestampSeconds);
+    setMessage(
+      pendingAnnotationRef.current
+        ? "Checkpoint reached. Record the verdict for your previous play."
+        : "Checkpoint reached. Add your annotation for this decision."
+    );
+  }
 
   function handleAnnotation(formData: FormData) {
     setMessage(null);
@@ -131,7 +125,12 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   return (
     <main className="workspace">
       <section className="review-main">
-        <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
+        <YouTubePlayer
+          ref={playerRef}
+          videoId={session.youtubeVideoId}
+          handBlocks={session.handBlocks}
+          onTimeChange={handlePlaybackTime}
+        />
         <div className="panel timeline-panel">
           <button type="button" onClick={handleAddAnnotation}>
             Add annotation
