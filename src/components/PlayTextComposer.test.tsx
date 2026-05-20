@@ -134,8 +134,9 @@ describe("PlayTextComposer", () => {
     await waitFor(() => expect(screen.getByAltText("Lightning Bolt preview")).toBeInTheDocument());
     expect(createPopperMock).toHaveBeenCalledWith(
       suggestion,
-      expect.any(HTMLSpanElement),
+      expect.any(HTMLDivElement),
       expect.objectContaining({
+        strategy: "fixed",
         placement: "top"
       })
     );

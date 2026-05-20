@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -52,8 +52,9 @@ describe("CardHoverText", () => {
 
     expect(createPopperMock).toHaveBeenCalledWith(
       mention,
-      expect.any(HTMLSpanElement),
+      expect.any(HTMLDivElement),
       expect.objectContaining({
+        strategy: "fixed",
         placement: "top",
         modifiers: expect.arrayContaining([
           expect.objectContaining({ name: "flip" }),
@@ -111,5 +112,30 @@ describe("CardHoverText", () => {
       )
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("repositions the preview after the card image loads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          image_uris: {
+            normal: "https://img.scryfall.com/cards/normal/lightning-bolt.jpg"
+          }
+        })
+      }))
+    );
+
+    const user = userEvent.setup();
+    render(<CardHoverText text="Cast Lightning Bolt" cardNames={["Lightning Bolt"]} />);
+
+    await user.hover(screen.getByText("Lightning Bolt"));
+
+    const preview = await screen.findByAltText("Lightning Bolt preview");
+    fireEvent.load(preview);
+
+    const popperInstance = createPopperMock.mock.results[0]?.value;
+    expect(popperInstance?.update).toHaveBeenCalled();
   });
 });

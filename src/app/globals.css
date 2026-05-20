@@ -301,18 +301,25 @@ button:disabled {
 
 .card-preview {
   z-index: 10;
-  width: 220px;
+  display: block;
+  width: min(220px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(30, 36, 32, 0.14);
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .card-preview img {
   display: block;
   width: 100%;
   height: auto;
+  max-height: calc(100vh - 40px);
+  object-fit: contain;
   border-radius: 6px;
 }
 
