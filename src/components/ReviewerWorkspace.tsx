@@ -3,6 +3,7 @@
 import React from "react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { DecklistPanel } from "@/components/DecklistPanel";
+import { PlayTextComposer } from "@/components/PlayTextComposer";
 import { YouTubePlayer, type YouTubePlayerHandle } from "@/components/YouTubePlayer";
 import { commitAnnotation, submitVerdict } from "@/lib/actions/reviewActions";
 import { parseDecklistCardNames } from "@/lib/domain/decklist";
@@ -28,6 +29,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
   const [timestampSeconds, setTimestampSeconds] = useState(0);
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [actionText, setActionText] = useState("");
   const [isPending, startTransition] = useTransition();
   const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
   const deckCardSuggestions = useMemo(() => parseDecklistCardNames(session.decklistText), [session.decklistText]);
@@ -56,6 +58,7 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
           argumentsText: String(formData.get("argumentsText") ?? ""),
           lockedAt: saved.locked_at
         });
+        setActionText("");
         setMessage("Annotation locked. Continue the video, then record the verdict at the next pause.");
       } catch (caught) {
         setMessage(caught instanceof Error ? caught.message : "Could not save annotation.");
@@ -171,17 +174,13 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
                   </option>
                 ))}
               </select>
-              <input
+              <PlayTextComposer
                 name="actionText"
-                required
-                list="deck-card-suggestions"
+                value={actionText}
+                onChange={setActionText}
+                cardNames={deckCardSuggestions}
                 placeholder="What play would you make?"
               />
-              <datalist id="deck-card-suggestions">
-                {deckCardSuggestions.map((cardName) => (
-                  <option key={cardName} value={cardName} />
-                ))}
-              </datalist>
               <textarea name="argumentsText" required rows={5} placeholder="Why this play and not another?" />
               <button type="submit" disabled={isPending}>
                 Commit and continue

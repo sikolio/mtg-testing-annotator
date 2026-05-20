@@ -59,8 +59,10 @@ describe("ReviewerWorkspace", () => {
     expect(screen.getByText("4 Lightning Bolt")).toBeInTheDocument();
   });
 
-  it("offers deck card names as autocomplete suggestions for the play input", () => {
-    const { container } = render(
+  it("offers in-line deck card suggestions for the freeform play input", async () => {
+    const userEventApi = userEvent.setup();
+
+    render(
       <ReviewerWorkspace
         session={{
           ...session,
@@ -71,11 +73,9 @@ describe("ReviewerWorkspace", () => {
       />
     );
 
-    expect(screen.getByPlaceholderText("What play would you make?")).toHaveAttribute("list", "deck-card-suggestions");
-    const suggestionValues = [...container.querySelectorAll("#deck-card-suggestions option")].map((option) =>
-      option.getAttribute("value")
-    );
-    expect(suggestionValues).toEqual(["Lightning Bolt", "Ragavan, Nimble Pilferer"]);
+    await userEventApi.type(screen.getByPlaceholderText("What play would you make?"), "Cast rag");
+
+    expect(screen.getByRole("button", { name: "Ragavan, Nimble Pilferer" })).toBeInTheDocument();
   });
 
   it("pauses the video and copies the exact current player timestamp into the annotation field", async () => {

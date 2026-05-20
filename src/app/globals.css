@@ -195,6 +195,57 @@ button:disabled {
   align-items: end;
 }
 
+.play-composer {
+  display: grid;
+  gap: 8px;
+}
+
+.play-composer-shell {
+  position: relative;
+}
+
+.play-composer-highlight,
+.play-composer-input {
+  min-height: 86px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font: inherit;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.play-composer-highlight {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: transparent;
+  pointer-events: none;
+}
+
+.play-composer-highlight mark {
+  color: transparent;
+  background: rgba(46, 125, 101, 0.18);
+  border-radius: 4px;
+}
+
+.play-composer-placeholder {
+  color: var(--muted);
+}
+
+.play-composer-input {
+  position: relative;
+  background: transparent;
+  resize: vertical;
+}
+
+.play-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .timestamp-field {
   color: var(--muted);
 }
