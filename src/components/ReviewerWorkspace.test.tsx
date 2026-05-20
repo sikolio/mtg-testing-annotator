@@ -29,6 +29,7 @@ const { playerFactory, playerState } = vi.hoisted(() => {
     cueVideoById: vi.fn(() => Promise.resolve()),
     destroy: vi.fn(),
     getCurrentTime: vi.fn(() => Promise.resolve(42.37)),
+    mute: vi.fn(() => Promise.resolve()),
     off: vi.fn((listener: (event: { data: number }) => void) => {
       if (stateChangeListener === listener) {
         stateChangeListener = null;
@@ -63,6 +64,7 @@ afterEach(() => {
   playerState.destroy.mockClear();
   playerState.cueVideoById.mockClear();
   playerState.getCurrentTime.mockClear();
+  playerState.mute.mockClear();
   playerState.off.mockClear();
   playerState.on.mockClear();
   playerState.pauseVideo.mockClear();
@@ -123,7 +125,7 @@ describe("ReviewerWorkspace", () => {
           {
             id: "checkpoint-1",
             sessionId: session.id,
-            timestampSeconds: 10,
+            timestampSeconds: 243.58,
             source: "manual_annotation"
           }
         ]}
@@ -131,11 +133,59 @@ describe("ReviewerWorkspace", () => {
     );
 
     await waitFor(() => expect(playerFactory).toHaveBeenCalledTimes(1));
-    await userEventApi.click(screen.getByRole("button", { name: "Jump to 10.00s" }));
+    await userEventApi.click(screen.getByRole("button", { name: "4:03.58" }));
 
-    expect(screen.getByLabelText("Current timestamp")).toHaveValue(10);
-    expect(playerState.cueVideoById).toHaveBeenCalledWith("LBkEDKfWpaA", 10);
+    expect(screen.getByLabelText("Current timestamp")).toHaveValue(243.58);
+    expect(playerState.cueVideoById).toHaveBeenCalledWith("LBkEDKfWpaA", 243.58);
     expect(playerState.seekTo).not.toHaveBeenCalled();
     expect(playerState.pauseVideo).toHaveBeenCalledTimes(1);
+  });
+
+  it("navigates checkpoints with prev and next buttons", async () => {
+    const userEventApi = userEvent.setup();
+
+    render(
+      <ReviewerWorkspace
+        session={session}
+        user={user}
+        decisionPoints={[
+          {
+            id: "checkpoint-1",
+            sessionId: session.id,
+            timestampSeconds: 243.58,
+            source: "manual_annotation"
+          },
+          {
+            id: "checkpoint-2",
+            sessionId: session.id,
+            timestampSeconds: 258.77,
+            source: "manual_annotation"
+          },
+          {
+            id: "checkpoint-3",
+            sessionId: session.id,
+            timestampSeconds: 312.89,
+            source: "manual_annotation"
+          }
+        ]}
+      />
+    );
+
+    const previousButton = screen.getByRole("button", { name: "Previous checkpoint" });
+    const nextButton = screen.getByRole("button", { name: "Next checkpoint" });
+
+    expect(previousButton).toBeDisabled();
+    expect(nextButton).not.toBeDisabled();
+
+    await userEventApi.click(nextButton);
+
+    expect(screen.getByLabelText("Current timestamp")).toHaveValue(258.77);
+    expect(playerState.cueVideoById).toHaveBeenCalledWith("LBkEDKfWpaA", 258.77);
+    expect(screen.getByRole("button", { name: "4:18.77" })).toHaveClass("active");
+
+    await userEventApi.click(previousButton);
+
+    expect(screen.getByLabelText("Current timestamp")).toHaveValue(243.58);
+    expect(screen.getByRole("button", { name: "4:03.58" })).toHaveClass("active");
   });
 });

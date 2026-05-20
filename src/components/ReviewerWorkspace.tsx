@@ -24,15 +24,25 @@ type ReviewerWorkspaceProps = {
   decisionPoints: DecisionPoint[];
 };
 
+function formatCheckpointTime(timestampSeconds: number) {
+  const minutes = Math.floor(timestampSeconds / 60);
+  const seconds = timestampSeconds - minutes * 60;
+  return `${minutes}:${seconds.toFixed(2).padStart(5, "0")}`;
+}
+
 export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWorkspaceProps) {
   const playerRef = useRef<YouTubePlayerHandle | null>(null);
   const [timestampSeconds, setTimestampSeconds] = useState(0);
   const [pendingAnnotation, setPendingAnnotation] = useState<Annotation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [actionText, setActionText] = useState("");
+  const [activeDecisionPointId, setActiveDecisionPointId] = useState(decisionPoints[0]?.id ?? "");
   const [isPending, startTransition] = useTransition();
   const sortedDecisionPoints = [...decisionPoints].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
   const deckCardSuggestions = useMemo(() => parseDecklistCardNames(session.decklistText), [session.decklistText]);
+  const activeDecisionPointIndex = sortedDecisionPoints.findIndex((point) => point.id === activeDecisionPointId);
+  const activeDecisionPoint =
+    activeDecisionPointIndex >= 0 ? sortedDecisionPoints[activeDecisionPointIndex] : sortedDecisionPoints[0] ?? null;
 
   function handleAnnotation(formData: FormData) {
     setMessage(null);
@@ -97,12 +107,29 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
 
   async function handleDecisionPointJump(point: DecisionPoint) {
     await playerRef.current?.seekTo(point.timestampSeconds);
+    setActiveDecisionPointId(point.id);
     setTimestampSeconds(point.timestampSeconds);
     setMessage(
       pendingAnnotation
         ? "Checkpoint loaded. Record the verdict for your previous play."
         : "Checkpoint loaded. Add your annotation for this decision."
     );
+  }
+
+  async function handleCheckpointStep(direction: -1 | 1) {
+    if (sortedDecisionPoints.length === 0) {
+      return;
+    }
+
+    const currentIndex = activeDecisionPointIndex >= 0 ? activeDecisionPointIndex : 0;
+    const nextIndex = currentIndex + direction;
+    const nextPoint = sortedDecisionPoints[nextIndex];
+
+    if (!nextPoint) {
+      return;
+    }
+
+    await handleDecisionPointJump(nextPoint);
   }
 
   return (
@@ -118,29 +145,70 @@ export function ReviewerWorkspace({ session, user, decisionPoints }: ReviewerWor
       <section className="review-main">
         <YouTubePlayer ref={playerRef} videoId={session.youtubeVideoId} handBlocks={session.handBlocks} />
         <div className="panel timeline-panel">
-          <button type="button" onClick={handleAddAnnotation}>
-            Add annotation
-          </button>
-          <label className="timestamp-field">
-            Current timestamp
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={timestampSeconds}
-              onChange={(event) => setTimestampSeconds(Number(event.target.value))}
-            />
-          </label>
-          <p>{decisionPoints.length} community checkpoints available.</p>
-          {sortedDecisionPoints.length > 0 ? (
-            <div className="checkpoint-list">
-              {sortedDecisionPoints.map((point) => (
-                <button key={point.id} type="button" onClick={() => handleDecisionPointJump(point)}>
-                  {`Jump to ${point.timestampSeconds.toFixed(2)}s`}
-                </button>
-              ))}
+          <div className="timeline-controls">
+            <button type="button" onClick={handleAddAnnotation}>
+              Add annotation
+            </button>
+            <label className="timestamp-field">
+              Current timestamp
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={timestampSeconds}
+                onChange={(event) => setTimestampSeconds(Number(event.target.value))}
+              />
+            </label>
+          </div>
+
+          <div className="checkpoint-panel">
+            <div className="checkpoint-summary">
+              <p>{decisionPoints.length} community checkpoints available.</p>
+              {activeDecisionPoint ? (
+                <span className="checkpoint-current">
+                  {`Checkpoint ${Math.max(activeDecisionPointIndex, 0) + 1} of ${sortedDecisionPoints.length}: ${formatCheckpointTime(activeDecisionPoint.timestampSeconds)}`}
+                </span>
+              ) : null}
             </div>
-          ) : null}
+
+            {sortedDecisionPoints.length > 0 ? (
+              <>
+                <div className="checkpoint-nav">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void handleCheckpointStep(-1)}
+                    disabled={(activeDecisionPointIndex >= 0 ? activeDecisionPointIndex : 0) === 0}
+                  >
+                    Previous checkpoint
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void handleCheckpointStep(1)}
+                    disabled={
+                      sortedDecisionPoints.length === 0 ||
+                      (activeDecisionPointIndex >= 0 ? activeDecisionPointIndex : 0) === sortedDecisionPoints.length - 1
+                    }
+                  >
+                    Next checkpoint
+                  </button>
+                </div>
+                <div className="checkpoint-list" role="list" aria-label="Community checkpoints">
+                  {sortedDecisionPoints.map((point) => (
+                    <button
+                      key={point.id}
+                      type="button"
+                      className={point.id === activeDecisionPoint?.id ? "secondary active checkpoint-item" : "secondary checkpoint-item"}
+                      onClick={() => void handleDecisionPointJump(point)}
+                    >
+                      {formatCheckpointTime(point.timestampSeconds)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
         </div>
       </section>
 
